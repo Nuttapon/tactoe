@@ -238,8 +238,16 @@ body.light .board-overlay{ background:rgba(244,247,251,.82); }
 
 .cell.wc{ animation:wf .45s ease forwards; }
 @keyframes wf{ 0%{transform:scale(1)} 45%{transform:scale(1.14)} 100%{transform:scale(1.07)} }
-.cell.wc.po{ background:rgba(0,255,204,.12); border-color:var(--o); }
-.cell.wc.px{ background:rgba(255,51,85,.12); border-color:var(--x); }
+.cell.wc.po{
+  background:rgba(0,255,204,.14); border-color:var(--o);
+  animation:wf .45s ease forwards, win-glow-o .7s ease .4s infinite alternate;
+}
+.cell.wc.px{
+  background:rgba(255,51,85,.14); border-color:var(--x);
+  animation:wf .45s ease forwards, win-glow-x .7s ease .4s infinite alternate;
+}
+@keyframes win-glow-o{ from{box-shadow:0 0 10px rgba(0,255,204,.3) inset} to{box-shadow:0 0 28px rgba(0,255,204,.75) inset,0 0 14px rgba(0,255,204,.4)} }
+@keyframes win-glow-x{ from{box-shadow:0 0 10px rgba(255,51,85,.3) inset}  to{box-shadow:0 0 28px rgba(255,51,85,.75) inset,0 0 14px rgba(255,51,85,.4)} }
 
 .cell.tgt{ cursor:crosshair; animation:tb .45s ease infinite; }
 @keyframes tb{ 0%,100%{border-color:var(--tie)} 50%{border-color:transparent} }
@@ -1356,31 +1364,43 @@ function fxLegendaryConfetti() {
 function end(r) {
   over = true;
   if (r.type === 'win') {
-    scores[r.p]++;
-    streaks[r.p]++;
-    streaks[r.p === 'O' ? 'X' : 'O'] = 0;  // reset opponent streak
-    r.ln.forEach(i => document.getElementById('board').children[i].classList.add('wc', `p${r.p.toLowerCase()}`));
+    // 1. Status line updates immediately so player knows who won
     setSt(t('wins', r.p), r.p.toLowerCase());
-    const n = streaks[r.p];
-    if (n >= 3) log(`${'\uD83D\uDD25'.repeat(Math.min(n-1,3))} ${r.p} is on a ${n}-round streak!`);
-    else        log(`\uD83C\uDFC6 ${r.p} wins Round ${round}!`);
-    // Escalating confetti
-    if      (n >= 5) { sndWin(); fxLegendaryConfetti(); }
-    else if (n === 4) { sndWin(); fxGoldConfetti(); }
-    else if (n === 3) { sndWin(); fxFireConfetti(); }
-    else               { sndWin(); fxWin(); }
-    bumpScore(`pts-${r.p.toLowerCase()}`);
+    // 2. Stagger winning-line cell highlights (180 ms apart) — player sees the line
+    r.ln.forEach((idx, order) => {
+      setTimeout(() => {
+        document.getElementById('board').children[idx]
+          .classList.add('wc', `p${r.p.toLowerCase()}`);
+      }, order * 200);
+    });
+    // 3. After cells are all lit (~600ms + buffer), fire confetti + score + overlay
+    setTimeout(() => {
+      scores[r.p]++;
+      streaks[r.p]++;
+      streaks[r.p === 'O' ? 'X' : 'O'] = 0;
+      const n = streaks[r.p];
+      if (n >= 3) log(`${'\uD83D\uDD25'.repeat(Math.min(n-1,3))} ${r.p} is on a ${n}-round streak!`);
+      else        log(`\uD83C\uDFC6 ${r.p} wins Round ${round}!`);
+      if      (n >= 5) { sndWin(); fxLegendaryConfetti(); }
+      else if (n === 4) { sndWin(); fxGoldConfetti(); }
+      else if (n === 3) { sndWin(); fxFireConfetti(); }
+      else               { sndWin(); fxWin(); }
+      bumpScore(`pts-${r.p.toLowerCase()}`);
+      updStreak(); updScFull(); renderAbs();
+      showOverlay(r);
+    }, 1100);
   } else {
     scores.tie++;
     // Draws preserve streaks — no reset
     setSt(t('draw'), 'tie');
-    log(`\uD83E\uDD1D Round ${round} ends in a draw.`);
     sndDraw();
-    bumpScore('pts-t');
+    setTimeout(() => {
+      log(`\uD83E\uDD1D Round ${round} ends in a draw.`);
+      bumpScore('pts-t');
+      updScFull(); renderAbs();
+      showOverlay(r);
+    }, 500);
   }
-  updStreak();
-  updScFull(); renderAbs();
-  showOverlay(r);
 }
 
 /* ══ ABILITY SYSTEM ══════════════════════════════════════════ */
