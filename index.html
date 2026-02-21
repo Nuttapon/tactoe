@@ -277,20 +277,17 @@ body.light .board-overlay{ background:rgba(244,247,251,.82); }
 
 /* ══ Mode Selector ════════════════════════════════════════ */
 .mode-bar{
-  display:flex; align-items:center; gap:6px;
+  display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:6px;
   background:var(--panel); border:1px solid var(--dim);
-  border-radius:12px; padding:7px 10px;
-  overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch;
+  border-radius:12px; padding:10px 12px; margin: 0 auto; max-width: 480px;
 }
-.mode-bar::-webkit-scrollbar{ display:none; }
-/* Centre items on wide screens; let them scroll on narrow */
-.mode-bar::before,.mode-bar::after{ content:''; flex:1; min-width:0; }
-.mode-lbl{ font-size:.55rem; letter-spacing:.2em; text-transform:uppercase; opacity:.3; margin-right:4px; }
+.mode-lbl{ width:100%; font-size:.55rem; letter-spacing:.2em; text-transform:uppercase; opacity:.4; text-align:center; margin-bottom:2px; }
 .mode-btn{
-  font-family:var(--font); font-size:.72rem; font-weight:700; letter-spacing:.08em;
-  text-transform:uppercase; padding:7px 16px; border-radius:8px;
+  flex: 1 1 calc(33.33% - 8px);
+  font-family:var(--font); font-size:.7rem; font-weight:700; letter-spacing:.05em;
+  text-transform:uppercase; padding:8px 4px; border-radius:8px;
   border:1px solid rgba(255,255,255,.1); background:transparent;
-  color:#556677; cursor:pointer; transition:all .22s; white-space:nowrap;
+  color:#556677; cursor:pointer; transition:all .22s; white-space:nowrap; text-align:center;
 }
 .mode-btn:hover{ color:#99aabb; border-color:rgba(255,255,255,.2); }
 .mode-btn.active-2p {
