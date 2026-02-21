@@ -411,6 +411,75 @@ body.light .ftag{ background:rgba(51,187,255,.08); }
 }
 .ctrl-bar button:hover{ background:rgba(255,255,255,.12); color:#fff; }
 
+/* ══ Player Mini Card (mobile sidebar) ════════════════════ */
+.player-mini-card{
+  display:none; /* hidden on desktop, shown on mobile via media query */
+  flex-direction:column; align-items:center; justify-content:center;
+  background:var(--panel); border:1px solid var(--dim); border-radius:12px;
+  padding:12px 10px; text-align:center; transition:all .3s; position:relative;
+  overflow:hidden; gap:4px;
+}
+.player-mini-card::before{
+  content:''; position:absolute; top:0; left:0; right:0; height:3px;
+  opacity:0; transition:opacity .3s;
+}
+.player-mini-card.o::before{ background:var(--o); }
+.player-mini-card.x::before{ background:var(--x); }
+.player-mini-card.active::before{ opacity:1; }
+.player-mini-card.active.o{ box-shadow:0 0 22px rgba(0,255,204,.18); border-color:rgba(0,255,204,.25); }
+.player-mini-card.active.x{ box-shadow:0 0 22px rgba(255,51,85,.18); border-color:rgba(255,51,85,.25); }
+
+.pmc-sym{
+  font-family:var(--font); font-size:1.8rem; font-weight:700; line-height:1;
+}
+.player-mini-card.o .pmc-sym{ color:var(--o); text-shadow:0 0 14px rgba(0,255,204,.5); }
+.player-mini-card.x .pmc-sym{ color:var(--x); text-shadow:0 0 14px rgba(255,51,85,.5); }
+
+.pmc-name{
+  font-family:var(--font); font-size:.65rem; font-weight:700;
+  letter-spacing:.12em; text-transform:uppercase; color:#c8d8e8; line-height:1.2;
+}
+.pmc-score{
+  font-family:var(--font); font-size:2rem; font-weight:700; line-height:1; margin:2px 0;
+}
+.player-mini-card.o .pmc-score{ color:var(--o); }
+.player-mini-card.x .pmc-score{ color:var(--x); }
+.pmc-score-lbl{
+  font-size:.52rem; letter-spacing:.2em; text-transform:uppercase; color:#5a7a90;
+}
+
+/* Turn indicator */
+.pmc-turn{
+  display:flex; align-items:center; gap:5px; margin-top:4px;
+  font-family:var(--font); font-size:.58rem; font-weight:700;
+  letter-spacing:.1em; text-transform:uppercase; opacity:0; transition:opacity .25s;
+}
+.pmc-turn.visible{ opacity:1; }
+.pmc-dot{
+  width:6px; height:6px; border-radius:50%; flex-shrink:0;
+}
+.player-mini-card.o .pmc-dot{ background:var(--o); animation:pmc-pulse-o 1.1s ease infinite; }
+.player-mini-card.x .pmc-dot{ background:var(--x); animation:pmc-pulse-x 1.1s ease infinite; }
+@keyframes pmc-pulse-o{
+  0%,100%{box-shadow:0 0 0 0 rgba(0,255,204,.6)}
+  50%{box-shadow:0 0 0 4px rgba(0,255,204,0)}
+}
+@keyframes pmc-pulse-x{
+  0%,100%{box-shadow:0 0 0 0 rgba(255,51,85,.6)}
+  50%{box-shadow:0 0 0 4px rgba(255,51,85,0)}
+}
+.pmc-frozen{
+  font-family:var(--font); font-size:.58rem; font-weight:700;
+  letter-spacing:.08em; text-transform:uppercase;
+  color:var(--freeze); margin-top:4px; display:none;
+}
+.pmc-frozen.visible{ display:block; }
+
+/* Light mode overrides */
+body.light .player-mini-card{ background:var(--panel); border-color:rgba(0,0,0,.1); }
+body.light .pmc-name{ color:#2a3a50; }
+body.light .pmc-score-lbl{ color:#7a8fa0; }
+body.light .pmc-frozen{ color:#0099dd; }
 @media(max-width:720px){
   .side{ width:140px; }
   .ab-icon{ font-size:1.75rem; }
@@ -426,6 +495,8 @@ body.light .ftag{ background:rgba(51,187,255,.08); }
   .scoreboard{ max-width:100%; }
   .ctrl-bar{ top:10px; right:10px; gap:5px; }
   .ctrl-bar button{ padding:7px 9px; font-size:.85rem; }
+  .side-head{ display:none; }
+  .player-mini-card{ display:flex; }
 }
 /* ══ Online Mode CSS ═══════════════════════════════════ */
 .mode-btn.active-online{
@@ -613,6 +684,17 @@ body.light .goal-btn.active{ border-color:var(--o); color:var(--o); }
   <div class="game-area">
     <div class="side" id="side-o">
       <div class="side-head o" id="sh-o">— O —</div>
+      <div class="player-mini-card o" id="pmc-o">
+        <div class="pmc-sym">O</div>
+        <div class="pmc-name" id="pmc-name-o">Player O</div>
+        <div class="pmc-score" id="pmc-score-o">0</div>
+        <div class="pmc-score-lbl">pts</div>
+        <div class="pmc-turn" id="pmc-turn-o">
+          <span class="pmc-dot"></span>
+          <span id="pmc-turn-txt-o">YOUR TURN</span>
+        </div>
+        <div class="pmc-frozen" id="pmc-frozen-o"></div>
+      </div>
       <div class="ab-card" id="ac-o">
         <span class="ab-icon" id="ai-o">?</span>
         <div class="ab-name" id="an-o">…</div>
@@ -637,6 +719,17 @@ body.light .goal-btn.active{ border-color:var(--o); color:var(--o); }
 
     <div class="side" id="side-x">
       <div class="side-head x" id="sh-x">— X —</div>
+      <div class="player-mini-card x" id="pmc-x">
+        <div class="pmc-sym">X</div>
+        <div class="pmc-name" id="pmc-name-x">Player X</div>
+        <div class="pmc-score" id="pmc-score-x">0</div>
+        <div class="pmc-score-lbl">pts</div>
+        <div class="pmc-turn" id="pmc-turn-x">
+          <span class="pmc-dot"></span>
+          <span id="pmc-turn-txt-x">YOUR TURN</span>
+        </div>
+        <div class="pmc-frozen" id="pmc-frozen-x"></div>
+      </div>
       <div class="ab-card" id="ac-x">
         <span class="ab-icon" id="ai-x">?</span>
         <div class="ab-name" id="an-x">…</div>
@@ -782,6 +875,8 @@ const LANG = {
     btnNext:'Next Round', btnReset:'Reset All',
     abilUse:'Use Ability', abilUsed:'— USED —', abilCancel:'CANCEL', abilAuto:'🤖 AUTO',
     frozen:'❄️ FROZEN',
+    yourTurn:'YOUR TURN',
+    botThinking:'THINKING…',
     spWall:'WALL', spBomb:'BOMB', spFreeze:'FREEZE', spWild:'WILD',
     turn:   p => `${p}'s Turn`,
     botTurn:'🤖 BOT is thinking…', botFirst:"🤖 BOT's Turn",
@@ -810,6 +905,8 @@ const LANG = {
     btnNext:'รอบถัดไป', btnReset:'เริ่มใหม่',
     abilUse:'ใช้ความสามารถ', abilUsed:'— ใช้แล้ว —', abilCancel:'ยกเลิก', abilAuto:'🤖 อัตโนมัติ',
     frozen:'❄️ แช่แข็ง',
+    yourTurn:'เทิร์นคุณ',
+    botThinking:'กำลังคิด…',
     spWall:'กำแพง', spBomb:'ระเบิด', spFreeze:'แช่แข็ง', spWild:'ไพ่ตาย',
     turn:   p => `ตา ${p}`,
     botTurn:'🤖 บอทกำลังคิด…', botFirst:'🤖 ตาบอท',
@@ -1776,6 +1873,7 @@ function setSt(msg, cls) {
 function updSc() {
   document.getElementById('sc-o').className = `sc o${!over && cur==='O' ? ' active' : ''}`;
   document.getElementById('sc-x').className = `sc x${!over && cur==='X' ? ' active' : ''}`;
+  updateMiniCards();
 }
 
 function updScFull() {
@@ -1784,6 +1882,45 @@ function updScFull() {
   document.getElementById('pts-t').textContent = scores.tie;
   document.getElementById('sc-o').className = 'sc o';
   document.getElementById('sc-x').className = 'sc x';
+  updateMiniCards();
+}
+
+function updateMiniCards() {
+  for (const p of ['O', 'X']) {
+    const lc = p.toLowerCase();
+    const card      = document.getElementById(`pmc-${lc}`);
+    const nameEl    = document.getElementById(`pmc-name-${lc}`);
+    const scoreEl   = document.getElementById(`pmc-score-${lc}`);
+    const turnEl    = document.getElementById(`pmc-turn-${lc}`);
+    const turnTxt   = document.getElementById(`pmc-turn-txt-${lc}`);
+    const frozenEl  = document.getElementById(`pmc-frozen-${lc}`);
+
+    if (!card) continue;
+
+    // Score
+    scoreEl.textContent = scores[p] ?? 0;
+
+    // Name label — mirrors lbl-o / lbl-x
+    nameEl.textContent = document.getElementById(`lbl-${lc}`).textContent;
+
+    // Active / turn state
+    const isActive  = !over && cur === p;
+    const isFrozenP = frozen === p;
+
+    card.className = `player-mini-card ${lc}${isActive ? ' active' : ''}`;
+
+    // Frozen state overrides turn indicator
+    frozenEl.textContent = t('frozen');
+    frozenEl.className   = `pmc-frozen${isFrozenP ? ' visible' : ''}`;
+
+    if (isFrozenP) {
+      turnEl.className = 'pmc-turn';
+    } else {
+      turnEl.className = `pmc-turn${isActive ? ' visible' : ''}`;
+      const isBot = gameMode !== '2p' && gameMode !== 'online' && p === BOT;
+      turnTxt.textContent = isBot ? (isActive ? t('botThinking') : '') : t('yourTurn');
+    }
+  }
 }
 
 function renderAbs() {
@@ -1919,6 +2056,7 @@ function syncModeUI() {
   const isBot = gameMode !== '2p';
   document.getElementById('lbl-o').textContent = isBot ? t('lblYou') : t('lblO');
   document.getElementById('lbl-x').textContent = isBot ? t('lblBot') : t('lblX');
+  updateMiniCards();
   const shX = document.getElementById('sh-x');
   if (isBot) {
     const labels = { easy:'EASY', hard:'HARD', expert:'EXPERT', grandmaster:'👑 MASTER' };
@@ -2903,6 +3041,7 @@ function activateOnlineUI() {
   document.getElementById('m-online').className = 'mode-btn active-online';
   document.getElementById('lbl-o').textContent = mySide==='O' ? t('lblYou') : t('lblOpponent');
   document.getElementById('lbl-x').textContent = mySide==='X' ? t('lblYou') : t('lblOpponent');
+  updateMiniCards();
   if (onlineTimer > 0) document.getElementById('timer-bar').classList.add('visible');
   document.getElementById('emote-bar').classList.add('visible');
   // Lock the goal bar so only host setting is authoritative
