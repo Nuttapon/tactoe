@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>TACTICAL TACTOE</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230a0f1a'/><text x='16' y='24' font-size='20' font-weight='900' text-anchor='middle' fill='%2300ffcc' font-family='sans-serif'>T²</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
 <style>
@@ -478,7 +479,61 @@ body.light .rm-join-input{ background:rgba(0,0,0,.04); color:#223344; border-col
 .match-banner{ font-family:var(--font); font-size:.7rem; font-weight:700; letter-spacing:.15em; text-transform:uppercase; color:#ffd700; text-align:center; min-height:1.2em; margin-bottom:4px; animation:fd .4s ease both; }
 body.light .goal-btn{ color:#3a5a6a; border-color:rgba(0,0,0,.15); }
 body.light .goal-btn.active{ border-color:var(--o); color:var(--o); }
+/* Emote bar (online only) */
+.emote-bar{ display:none; align-items:center; justify-content:center; gap:6px; margin:4px 0 6px; }
+.emote-bar.visible{ display:flex; }
+.emote-btn{ font-size:1.35rem; background:none; border:1px solid rgba(255,255,255,.1); border-radius:50%; width:38px; height:38px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
+.emote-btn:hover{ background:rgba(255,255,255,.08); transform:scale(1.2); border-color:rgba(0,255,204,.3); }
+.emote-btn:disabled{ opacity:.35; cursor:not-allowed; transform:none; }
+/* Floating emote bubble */
+.emote-bubble{ position:fixed; font-size:2.4rem; pointer-events:none; z-index:9999;
+  animation:emote-rise 2.2s cubic-bezier(.2,.8,.4,1) forwards; }
+@keyframes emote-rise{
+  0%  { transform:scale(0)   translateY(0);    opacity:0; }
+  15% { transform:scale(1.4) translateY(0);    opacity:1; }
+  60% { transform:scale(1)   translateY(-70px); opacity:1; }
+  100%{ transform:scale(.8)  translateY(-130px); opacity:0; }
+}
+/* Rematch row in board overlay */
+.ov-rematch-row{ display:none; gap:10px; margin-top:10px; }
+.ov-rematch-row.visible{ display:flex; }
+.ov-rematch-btn{ font-family:var(--font); font-size:.78rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+  padding:10px 22px; border-radius:9px; border:1px solid rgba(51,187,255,.5); color:#33bbff;
+  background:rgba(51,187,255,.08); cursor:pointer; transition:all .2s; flex:1; }
+.ov-rematch-btn:hover{ background:rgba(51,187,255,.18); }
+.ov-rematch-btn.waiting{ opacity:.6; cursor:not-allowed; }
+/* Game start animation overlay */
+#start-ov{ position:fixed; inset:0; z-index:8000; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background:rgba(5,10,20,.92); opacity:0; pointer-events:none; transition:opacity .3s; }
+#start-ov.show{ opacity:1; pointer-events:all; }
+.start-match{ font-family:var(--font); font-size:1rem; letter-spacing:.4em; color:#5a7a90; text-transform:uppercase; margin-bottom:10px;
+  animation:fd .4s ease both; }
+.start-role{ font-family:var(--font); font-size:2rem; font-weight:700; letter-spacing:.1em; margin:8px 0 4px;
+  animation:fd .4s ease .15s both; }
+.start-role.o{ color:var(--o); }
+.start-role.x{ color:var(--x); }
+.start-vs{ font-family:var(--font); font-size:.8rem; color:#5a7a90; letter-spacing:.2em; margin-bottom:20px;
+  animation:fd .4s ease .25s both; }
+.start-goal-tag{ font-family:var(--font); font-size:.7rem; font-weight:700; letter-spacing:.2em; text-transform:uppercase;
+  color:#ffd700; border:1px solid rgba(255,215,0,.3); border-radius:6px; padding:4px 14px; margin-bottom:28px;
+  animation:fd .4s ease .3s both; }
+.start-cd{ font-family:var(--font); font-size:5rem; font-weight:900; color:#fff; line-height:1;
+  animation:cd-pop .6s cubic-bezier(.4,0,.2,1) both; }
+@keyframes cd-pop{
+  0%  { transform:scale(2);   opacity:0; }
+  40% { transform:scale(1);   opacity:1; }
+  100%{ transform:scale(.85); opacity:1; }
+}
+.start-go{ font-family:var(--font); font-size:3.8rem; font-weight:900; color:var(--o);
+  text-shadow:0 0 30px rgba(0,255,204,.6);
+  animation:go-pop .5s cubic-bezier(.2,.8,.3,1) both; }
+@keyframes go-pop{
+  0%  { transform:scale(0) rotate(-8deg); opacity:0; }
+  60% { transform:scale(1.15) rotate(2deg); opacity:1; }
+  100%{ transform:scale(1) rotate(0); opacity:1; }
+}
 </style>
+
 </head>
 <body>
 
@@ -531,6 +586,16 @@ body.light .goal-btn.active{ border-color:var(--o); color:var(--o); }
 
   <div class="status o" id="status">O's Turn</div>
 
+  <!-- Emote bar (shown only in online mode) -->
+  <div class="emote-bar" id="emote-bar">
+    <button class="emote-btn" onclick="sendEmote('😂')" title="Haha">😂</button>
+    <button class="emote-btn" onclick="sendEmote('🔥')" title="Fire">🔥</button>
+    <button class="emote-btn" onclick="sendEmote('😤')" title="GG">😤</button>
+    <button class="emote-btn" onclick="sendEmote('👏')" title="GG">👏</button>
+    <button class="emote-btn" onclick="sendEmote('💀')" title="RIP">💀</button>
+    <button class="emote-btn" onclick="sendEmote('🤔')" title="Hmm">🤔</button>
+  </div>
+
   <div class="game-area">
     <div class="side" id="side-o">
       <div class="side-head o" id="sh-o">— O —</div>
@@ -549,7 +614,10 @@ body.light .goal-btn.active{ border-color:var(--o); color:var(--o); }
       <svg id="win-line-svg" aria-hidden="true"><line id="win-line-path"/></svg>
       <div class="board-overlay" id="board-overlay">
         <div class="ov-result" id="ov-result"></div>
-        <button class="ov-btn" id="ov-btn" onclick="nextRound()"></button>
+        <button class="ov-btn" id="ov-btn"></button>
+        <div class="ov-rematch-row" id="ov-rematch-row">
+          <button class="ov-rematch-btn" id="ov-rematch-btn" onclick="requestRematch()">⚡ Rematch</button>
+        </div>
       </div>
     </div>
 
@@ -603,6 +671,14 @@ body.light .goal-btn.active{ border-color:var(--o); color:var(--o); }
         <button class="rm-t" onclick="setTimer(15)">15s</button>
         <button class="rm-t" onclick="setTimer(0)">Off</button>
       </div>
+      <div class="rm-sep">Match Goal</div>
+      <div class="rm-timer-lbl">First to how many wins?</div>
+      <div class="rm-timer-opts" id="rm-goal-opts">
+        <button class="rm-t" onclick="setOnlineGoal(3)">3</button>
+        <button class="rm-t" onclick="setOnlineGoal(5)">5</button>
+        <button class="rm-t" onclick="setOnlineGoal(7)">7</button>
+        <button class="rm-t sel" onclick="setOnlineGoal(0)">∞</button>
+      </div>
     </div>
 
     <!-- Guest section: pre-filled from URL hash -->
@@ -620,6 +696,15 @@ body.light .goal-btn.active{ border-color:var(--o); color:var(--o); }
       <button class="rm-btn secondary" id="rm-cancel-btn" onclick="closeOnlineModal()" style="flex:1">Cancel</button>
     </div>
   </div>
+</div>
+
+<!-- Game start animation overlay -->
+<div id="start-ov">
+  <div class="start-match" id="start-match">Match Found</div>
+  <div class="start-role" id="start-role"></div>
+  <div class="start-vs" id="start-vs"></div>
+  <div class="start-goal-tag" id="start-goal-tag"></div>
+  <div id="start-cd"></div>
 </div>
 
 <script>
@@ -1404,6 +1489,18 @@ function showOverlay(r) {
   const btn = document.getElementById('ov-btn');
   res.textContent = msg; res.style.color = col;
   btn.textContent = t('btnNext');
+  btn.onclick = () => nextRound();
+  // Rematch row: visible only in online mode
+  const rmRow = document.getElementById('ov-rematch-row');
+  const rmBtn = document.getElementById('ov-rematch-btn');
+  if (onlineMode) {
+    rmRow.classList.add('visible');
+    rmBtn.textContent = '\u26a1 Rematch';
+    rmBtn.className = 'ov-rematch-btn';
+    rmBtn.disabled = false;
+  } else {
+    rmRow.classList.remove('visible');
+  }
   document.getElementById('board-overlay').classList.add('visible');
 }
 
@@ -1774,8 +1871,16 @@ let botThinking = false;  // prevents double-triggers during async delay
 /* ── Mode switcher ────────────────────────────────────────── */
 function setMode(m) {
   gameMode = m;
+  // If leaving online mode, clean up online UI
+  if (m !== 'online') {
+    onlineMode = false; mySide = null;
+    if (onlineChannel) { onlineChannel.unsubscribe(); onlineChannel = null; }
+    document.getElementById('emote-bar').classList.remove('visible');
+    document.querySelectorAll('.goal-btn').forEach(b => b.disabled = false);
+    document.getElementById('match-banner').textContent = '';
+    window.location.hash = '';
+  }
   syncModeUI();
-  // Restart cleanly when mode changes mid-session
   scores = { O:0, X:0, tie:0 }; round = 1; cur = HUMAN;
   feedLog = []; document.getElementById('feed').innerHTML = '';
   updScFull(); init();
@@ -2609,8 +2714,8 @@ function hostRoom(id) {
           scores={O:0,X:0,tie:0}; streaks={O:0,X:0}; round=1; cur='O'; feedLog=[];
           document.getElementById('feed').innerHTML = '';
           init(); // host generates board
-          broadcastOnline('room:ready', { timerSecs: onlineTimer });
-          setTimeout(() => { closeOnlineModal(); activateOnlineUI(); startTurnTimer(); }, 700);
+          broadcastOnline('room:ready', { timerSecs: onlineTimer, matchGoal: matchGoal });
+          setTimeout(() => { closeOnlineModal(); playStartAnimation(() => { activateOnlineUI(); startTurnTimer(); }); }, 700);
           break;
         case 'game:move': case 'game:ability':
           applyRemoteUI(payload.state); break;
@@ -2621,6 +2726,15 @@ function hostRoom(id) {
         case 'game:req_nr': // guest requests next round — host generates
           round++; init();
           broadcastOnline('game:next_round');
+          break;
+        case 'game:emote': showEmoteBubble(payload.emoji, payload.sender); break;
+        case 'game:rematch':
+          if (mySide === 'O') { // host generates new round
+            round++; init();
+            broadcastOnline('game:next_round');
+            document.getElementById('board-overlay').classList.remove('visible');
+            document.getElementById('ov-rematch-row').classList.remove('visible');
+          }
           break;
       }
     })
@@ -2637,11 +2751,19 @@ function joinRoom(id) {
       switch(event) {
         case 'room:ready':
           onlineTimer = payload.timerSecs;
+          if (typeof payload.matchGoal === 'number') {
+            matchGoal = payload.matchGoal;
+            // Sync goal bar UI
+            [0,3,5,7].forEach(v => {
+              const b = document.getElementById(`g-${v}`);
+              if (b) b.classList.toggle('active', v === matchGoal);
+            });
+          }
           onlineMode = true; gameMode = 'online';
           scores={O:0,X:0,tie:0}; streaks={O:0,X:0}; round=1;
           applyRemoteUI(payload.state);
-          setOnlineStatus('✅ Connected! Game starting…', 'ok');
-          setTimeout(() => { closeOnlineModal(); activateOnlineUI(); updateOnlineTurnTimer(); }, 700);
+          setOnlineStatus('\u2705 Connected! Game starting\u2026', 'ok');
+          setTimeout(() => { closeOnlineModal(); playStartAnimation(() => { activateOnlineUI(); updateOnlineTurnTimer(); }); }, 700);
           break;
         case 'game:move': case 'game:ability':
           applyRemoteUI(payload.state); break;
@@ -2649,6 +2771,12 @@ function joinRoom(id) {
         case 'game:next_round': onRemoteNextRound(payload); break;
         case 'game:reset':  applyRemoteUI(payload.state); break;
         case 'game:timer':  if(cur!==mySide){ clearTurnTimer(); advTurn(); } break;
+        case 'game:emote': showEmoteBubble(payload.emoji, payload.sender); break;
+        case 'game:rematch':
+          // Host sent rematch (game:next_round will follow), just close overlay
+          document.getElementById('board-overlay').classList.remove('visible');
+          document.getElementById('ov-rematch-row').classList.remove('visible');
+          break;
       }
     })
     .subscribe(status => {
@@ -2670,6 +2798,7 @@ function onRemoteEnd({ state, result }) {
         if (el) el.classList.add('wc', `p${result.p.toLowerCase()}`);
       }, order * 200);
     });
+    setTimeout(() => drawWinLine(result.ln, result.p), 420);
     setSt(t('wins', result.p), result.p.toLowerCase());
     sndWin();
     const n = streaks[result.p];
@@ -2696,11 +2825,134 @@ function activateOnlineUI() {
   document.getElementById('lbl-o').textContent = mySide==='O' ? t('lblYou') : t('lblOpponent');
   document.getElementById('lbl-x').textContent = mySide==='X' ? t('lblYou') : t('lblOpponent');
   if (onlineTimer > 0) document.getElementById('timer-bar').classList.add('visible');
+  document.getElementById('emote-bar').classList.add('visible');
+  // Lock the goal bar so only host setting is authoritative
+  document.querySelectorAll('.goal-btn').forEach(b => b.disabled = true);
+  // Sync goal bar active state
+  [0,3,5,7].forEach(v => {
+    const b = document.getElementById(`g-${v}`);
+    if (b) b.classList.toggle('active', v === matchGoal);
+  });
+  document.getElementById('match-banner').textContent =
+    matchGoal ? `⚡ FIRST TO ${matchGoal}` : '';
 }
 
 /* ══════════════════════════════════════════════════════════════
-   WINNING LINE ANIMATION
+   ONLINE GOAL + START ANIMATION
 ══════════════════════════════════════════════════════════════ */
+
+function setOnlineGoal(n) {
+  matchGoal = n;
+  document.querySelectorAll('#rm-goal-opts .rm-t').forEach(b => b.classList.remove('sel'));
+  // Mark selected button by index: 3=0, 5=1, 7=2, ∞=3
+  const idx = [3,5,7,0].indexOf(n);
+  const opts = document.querySelectorAll('#rm-goal-opts .rm-t');
+  if (opts[idx]) opts[idx].classList.add('sel');
+}
+
+function playStartAnimation(onDone) {
+  const ov       = document.getElementById('start-ov');
+  const roleEl   = document.getElementById('start-role');
+  const vsEl     = document.getElementById('start-vs');
+  const goalEl   = document.getElementById('start-goal-tag');
+  const cdEl     = document.getElementById('start-cd');
+
+  const roleLabel = mySide === 'O' ? 'YOU ARE ○' : 'YOU ARE ✕';
+  const oppLabel  = mySide === 'O' ? 'vs X — Opponent' : 'vs O — Opponent';
+  const goalLabel = matchGoal ? `🏆 First to ${matchGoal} Wins` : '∞ Infinite Match';
+
+  roleEl.textContent = roleLabel;
+  roleEl.className   = `start-role ${mySide.toLowerCase()}`;
+  vsEl.textContent   = oppLabel;
+  goalEl.textContent = goalLabel;
+  cdEl.textContent   = '';
+  cdEl.className     = 'start-cd';
+
+  ov.classList.add('show');
+  sndWin();
+
+  // Countdown 3 → 2 → 1 → FIGHT!
+  const steps = ['3','2','1','🞴 FIGHT!'];
+  let i = 0;
+  function tick() {
+    if (i >= steps.length) {
+      // Fade out overlay
+      ov.style.transition = 'opacity .5s';
+      ov.style.opacity    = '0';
+      setTimeout(() => {
+        ov.classList.remove('show');
+        ov.style.opacity    = '';
+        ov.style.transition = '';
+        onDone();
+      }, 500);
+      return;
+    }
+    const step = steps[i++];
+    // Re-trigger animation by swapping class
+    cdEl.className = '';
+    void cdEl.offsetWidth; // reflow
+    cdEl.className = step === '🞴 FIGHT!' ? 'start-go' : 'start-cd';
+    cdEl.textContent = step;
+    if (step !== '🞴 FIGHT!') sndPlace && sndPlace();
+    setTimeout(tick, step === '🞴 FIGHT!' ? 900 : 800);
+  }
+  setTimeout(tick, 900); // brief pause after role reveal
+}
+
+let emoteCooldown = false;
+
+function sendEmote(emoji) {
+  if (emoteCooldown) return;
+  emoteCooldown = true;
+  // Disable all emote buttons briefly
+  document.querySelectorAll('.emote-btn').forEach(b => b.disabled = true);
+  setTimeout(() => {
+    emoteCooldown = false;
+    document.querySelectorAll('.emote-btn').forEach(b => b.disabled = false);
+  }, 2000);
+  // Show locally
+  showEmoteBubble(emoji, mySide);
+  // Broadcast to opponent
+  if (onlineChannel) onlineChannel.send({ type:'broadcast', event:'game:emote', payload:{ emoji, sender:mySide } });
+}
+
+function showEmoteBubble(emoji, side) {
+  const board = document.getElementById('board');
+  const rect  = board.getBoundingClientRect();
+  // O floats from left side, X from right side
+  const x = side === 'O' ? rect.left  + rect.width * .25 : rect.right - rect.width * .25;
+  const y = rect.top + rect.height * .5;
+  const el = document.createElement('div');
+  el.className = 'emote-bubble';
+  el.textContent = emoji;
+  el.style.left = x + 'px';
+  el.style.top  = y + 'px';
+  document.body.appendChild(el);
+  el.addEventListener('animationend', () => el.remove());
+}
+
+/* ══════════════════════════════════════════════════════════════
+   REMATCH (ONLINE)
+══════════════════════════════════════════════════════════════ */
+
+function requestRematch() {
+  const btn = document.getElementById('ov-rematch-btn');
+  if (mySide === 'O') {
+    // Host — generate next round immediately and broadcast
+    round++; init();
+    broadcastOnline('game:rematch');
+    document.getElementById('board-overlay').classList.remove('visible');
+    document.getElementById('ov-rematch-row').classList.remove('visible');
+  } else {
+    // Guest — send request to host
+    broadcastOnline('game:rematch');
+    btn.textContent = '\u23f3 Waiting for host\u2026';
+    btn.classList.add('waiting');
+    btn.disabled = true;
+  }
+}
+
+
 
 function drawWinLine(ln, p) {
   const board = document.getElementById('board');
