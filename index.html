@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>CHAOS O×X 2026</title>
+<title>TACTOE</title>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
 <style>
 /* ══ Root tokens ══════════════════════════════════════════ */
@@ -167,6 +167,32 @@ h1{
   background:var(--panel); border:1px solid var(--dim); border-radius:16px; flex-shrink:0;
   transform-origin:center center;
 }
+
+/* ══ Round-end Board Overlay ══════════════════════════════ */
+.board-wrap{ position:relative; flex-shrink:0; }
+.board-overlay{
+  position:absolute; inset:0; border-radius:16px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
+  background:rgba(4,8,16,.75); backdrop-filter:blur(7px); -webkit-backdrop-filter:blur(7px);
+  z-index:10; opacity:0; pointer-events:none;
+  transition:opacity .3s ease;
+}
+.board-overlay.visible{ opacity:1; pointer-events:all; }
+body.light .board-overlay{ background:rgba(244,247,251,.82); }
+.ov-result{
+  font-family:var(--font); font-weight:700;
+  font-size:clamp(1rem,3.5vw,1.5rem); letter-spacing:.12em;
+  text-transform:uppercase; text-align:center; padding:0 14px;
+}
+.ov-btn{
+  font-family:var(--font); font-size:.95rem; font-weight:700;
+  letter-spacing:.12em; text-transform:uppercase;
+  padding:13px 38px; border-radius:12px;
+  border:1px solid var(--o); color:var(--o);
+  background:rgba(0,255,204,.08);
+  cursor:pointer; transition:all .2s;
+}
+.ov-btn:hover{ background:rgba(0,255,204,.18); box-shadow:0 0 20px rgba(0,255,204,.3); }
 
 .cell{
   width:clamp(110px,14vw,150px); height:clamp(110px,14vw,150px); border-radius:12px;
@@ -419,7 +445,13 @@ body.light .ftag{ background:rgba(51,187,255,.08); }
       <div class="ftag" id="ft-o">❄️ FROZEN</div>
     </div>
 
-    <div class="board" id="board"></div>
+    <div class="board-wrap">
+      <div class="board" id="board"></div>
+      <div class="board-overlay" id="board-overlay">
+        <div class="ov-result" id="ov-result"></div>
+        <button class="ov-btn" id="ov-btn" onclick="nextRound()"></button>
+      </div>
+    </div>
 
     <div class="side" id="side-x">
       <div class="side-head x" id="sh-x">— X —</div>
@@ -455,7 +487,7 @@ body.light .ftag{ background:rgba(51,187,255,.08); }
 
 <script>
 /* ═══════════════════════════════════════════════════════════════
-   CHAOS O×X 2026 — Full engine with Sound + Visual FX
+   TACTOE — Full engine with Sound + Visual FX
 
    ARCHITECTURE:
      1. Audio Engine  — Web Audio API, all sounds synthesised
@@ -581,6 +613,9 @@ function refreshUI() {
     'ft-o':'frozen', 'ft-x':'frozen',
     'lbl-t':'lblDraws'
   };
+  // Re-translate overlay button if visible
+  const ovBtn = document.getElementById('ov-btn');
+  if (ovBtn) ovBtn.textContent = t('btnNext');
   for (const [id, key] of Object.entries(ids)) {
     const el = document.getElementById(id);
     if (el) el.textContent = t(key);
@@ -1002,6 +1037,7 @@ function init() {
   board    = Array(9).fill(null);
   specials = Array(9).fill(null);
   over = false; frozen = null; botThinking = false;
+  document.getElementById('board-overlay').classList.remove('visible');
 
   // Give each player a different random ability
   const sh = shuffle([...POOL]);
@@ -1211,6 +1247,16 @@ function winLine(p) {
 }
 
 /* ── End game ─────────────────────────────────────────────── */
+function showOverlay(r) {
+  const msg = r.type === 'win' ? t('wins', r.p) : t('draw');
+  const col = r.type === 'win' ? (r.p === 'O' ? 'var(--o)' : 'var(--x)') : 'var(--tie)';
+  const res = document.getElementById('ov-result');
+  const btn = document.getElementById('ov-btn');
+  res.textContent = msg; res.style.color = col;
+  btn.textContent = t('btnNext');
+  document.getElementById('board-overlay').classList.add('visible');
+}
+
 function end(r) {
   over = true;
   if (r.type === 'win') {
@@ -1228,6 +1274,7 @@ function end(r) {
     bumpScore('pts-t');
   }
   updScFull(); renderAbs();
+  showOverlay(r);
 }
 
 /* ══ ABILITY SYSTEM ══════════════════════════════════════════ */

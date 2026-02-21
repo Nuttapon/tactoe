@@ -1,8 +1,8 @@
-# 🎮 TACTOE — Chaos Edition
+# 🎮 TACTOE
 
 > **"It's Tic-Tac-Toe, but chaos."**
 
-TACTOE is a next-generation Tic-Tac-Toe game built entirely in a single HTML file (no dependencies, no build step). Every round is turbocharged with random **special tiles**, unique **abilities**, a fully synthesised **audio engine**, rich **particle effects**, and a capable **AI bot** with four distinct difficulty levels.
+**TACTOE** is a next-generation Tic-Tac-Toe game built entirely in a single HTML file — no dependencies, no build step. Every round is turbocharged with random **special tiles**, unique **abilities**, a fully synthesised **audio engine**, rich **particle effects**, and a capable **AI bot** with four distinct difficulty levels.
 
 ---
 
@@ -171,7 +171,7 @@ A pool-based canvas particle engine renders:
 The entire game lives in **one self-contained `index.html`** file.
 
 ```
-TACTOE
+TACTOE (single index.html)
 ├── 1. Audio Engine     Web Audio API — oscillators, noise, FM synthesis
 ├── 2. Particle System  Canvas overlay — pool-based particle animation
 └── 3. Game Logic
@@ -180,10 +180,10 @@ TACTOE
     ├── Win Detection (with Star wildcard support)
     ├── Ability System (Nuke, Shield, Swap, Extra, Oracle)
     ├── Bot Engine
-    │   ├── Easy (random)
-    │   ├── Hard (minimax + alpha-beta)
-    │   ├── Expert (minimax + positional weights + miss rate)
-    │   └── Grandmaster (perfect minimax + cost-aware ability eval)
+    │   ├── Easy   — random move selection
+    │   ├── Hard   — minimax + alpha-beta pruning
+    │   ├── Expert — minimax + positional weights + 8% miss rate
+    │   └── Master — perfect minimax + cost-aware ability evaluation
     └── i18n System (EN / TH, localStorage persistence)
 ```
 
@@ -224,6 +224,6 @@ MIT — free to use, modify, and share.
 
 ## 🙏 Credits
 
-Designed and developed by **Nuttapon** · 2026
+**TACTOE** — Designed and developed by [Nuttapon](https://github.com/Nuttapon) · 2026
 
 Fonts: [Rajdhani](https://fonts.google.com/specimen/Rajdhani) & [Share Tech Mono](https://fonts.google.com/specimen/Share+Tech+Mono) via Google Fonts.
