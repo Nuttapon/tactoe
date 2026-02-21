@@ -689,7 +689,7 @@ body.light .goal-btn.active{ border-color:var(--o); color:var(--o); }
         <div class="pmc-sym">O</div>
         <div class="pmc-name" id="pmc-name-o">Player O</div>
         <div class="pmc-score" id="pmc-score-o">0</div>
-        <div class="pmc-score-lbl">pts</div>
+        <div class="pmc-score-lbl" id="pmc-score-lbl-o">pts</div>
         <div class="pmc-turn" id="pmc-turn-o">
           <span class="pmc-dot"></span>
           <span id="pmc-turn-txt-o">YOUR TURN</span>
@@ -724,7 +724,7 @@ body.light .goal-btn.active{ border-color:var(--o); color:var(--o); }
         <div class="pmc-sym">X</div>
         <div class="pmc-name" id="pmc-name-x">Player X</div>
         <div class="pmc-score" id="pmc-score-x">0</div>
-        <div class="pmc-score-lbl">pts</div>
+        <div class="pmc-score-lbl" id="pmc-score-lbl-x">pts</div>
         <div class="pmc-turn" id="pmc-turn-x">
           <span class="pmc-dot"></span>
           <span id="pmc-turn-txt-x">YOUR TURN</span>
@@ -764,14 +764,14 @@ body.light .goal-btn.active{ border-color:var(--o); color:var(--o); }
 <!-- ── Online Room Modal ────────────────────────────────────────── -->
 <div class="rm-overlay" id="room-modal">
   <div class="rm-card">
-    <div class="rm-title">🌐 Online Multiplayer</div>
+    <div class="rm-title" id="rm-title">🌐 Online Multiplayer</div>
     <div class="rm-sub" id="rm-sub">TACTICAL TACTOE</div>
 
     <!-- Host section: auto-created, no action needed -->
     <div id="rm-host-section">
       <div class="rm-id" id="rm-room-id">------</div>
       <button class="rm-copy" id="rm-copy-btn" onclick="copyRoomLink()">📋 Copy Invite Link</button>
-      <div class="rm-sep">Turn Timer</div>
+      <div class="rm-sep" id="rm-sep-timer">Turn Timer</div>
       <div class="rm-timer-lbl" id="rm-timer-lbl">How many seconds per turn?</div>
       <div class="rm-timer-opts">
         <button class="rm-t" onclick="setTimer(5)">5s</button>
@@ -779,8 +779,8 @@ body.light .goal-btn.active{ border-color:var(--o); color:var(--o); }
         <button class="rm-t" onclick="setTimer(15)">15s</button>
         <button class="rm-t" onclick="setTimer(0)">Off</button>
       </div>
-      <div class="rm-sep">Match Goal</div>
-      <div class="rm-timer-lbl">First to how many wins?</div>
+      <div class="rm-sep" id="rm-sep-goal">Match Goal</div>
+      <div class="rm-timer-lbl" id="rm-goal-lbl">First to how many wins?</div>
       <div class="rm-timer-opts" id="rm-goal-opts">
         <button class="rm-t" onclick="setOnlineGoal(3)">3</button>
         <button class="rm-t" onclick="setOnlineGoal(5)">5</button>
@@ -791,7 +791,7 @@ body.light .goal-btn.active{ border-color:var(--o); color:var(--o); }
 
     <!-- Guest section: pre-filled from URL hash -->
     <div id="rm-guest-section" style="display:none">
-      <div class="rm-timer-lbl">Room Code</div>
+      <div class="rm-timer-lbl" id="rm-roomcode-lbl">Room Code</div>
       <input class="rm-join-input" id="rm-join-input" placeholder="ABC123" maxlength="6"
         oninput="this.value=this.value.toUpperCase()"/>
     </div>
@@ -809,8 +809,8 @@ body.light .goal-btn.active{ border-color:var(--o); color:var(--o); }
 <!-- Disconnect overlay -->
 <div id="dc-ov">
   <div class="dc-icon">💔</div>
-  <div class="dc-title">Opponent Disconnected</div>
-  <div class="dc-sub">Waiting for them to rejoin…</div>
+  <div class="dc-title" id="dc-title">Opponent Disconnected</div>
+  <div class="dc-sub" id="dc-sub">Waiting for them to rejoin…</div>
   <div class="dc-cd" id="dc-cd">10</div>
   <button class="dc-btn" id="dc-btn" onclick="dcGiveUp()">Return to Menu</button>
 </div>
@@ -892,7 +892,37 @@ const LANG = {
       oracle:'Free: convert a random Wall into a ⭐ Wildcard.'
     },
     streakLabel:'STREAK', streakLegendary:'LEGENDARY',
-    lblOpponent:'OPPONENT'
+    lblOpponent:'OPPONENT',
+    // Online match
+    goalLbl:'First to',
+    ptsLbl:'pts',
+    rmTitle:'🌐 Online Multiplayer',
+    rmCopyBtn:'📋 Copy Invite Link',
+    rmCopied:'✓ Copied!',
+    rmSepTimer:'Turn Timer',
+    rmTimerQuestion:'How many seconds per turn?',
+    rmSepGoal:'Match Goal',
+    rmGoalQuestion:'First to how many wins?',
+    rmRoomCode:'Room Code',
+    rmJoin:'Join Room',
+    rmCancel:'Cancel',
+    rmJoining:'⏳ Joining…',
+    rmWaitingOpponent:'⏳ Waiting for opponent…',
+    rmRoomFound:'🔗 Room found — click Join Room to connect',
+    rmInvalidCode:'❌ Enter a valid 6-character room code',
+    rmOppJoined:'✅ Opponent joined! Starting…',
+    rmConnecting:'🔗 Connecting…',
+    rmConnected:'✅ Connected! Game starting…',
+    rmWaitingHost:'⏳ Waiting for host…',
+    dcTitle:'Opponent Disconnected',
+    dcSub:'Waiting for them to rejoin…',
+    dcBtn:'Return to Menu',
+    connLost:'Connection Lost',
+    matchFound:'Match Found',
+    roleYou:       side => `YOU ARE ${side === 'O' ? '○' : '✕'}`,
+    vsOpponent:    side => `vs ${side === 'O' ? 'X' : 'O'} — Opponent`,
+    matchGoalLabel: n  => n ? `🏆 First to ${n} Wins` : '∞ Infinite Match',
+    startFight:'🞴 FIGHT!'
   },
   th: {
     eyebrow:'ฉบับยุทธวิธี', tsub:'ไอเทม & ความสามารถ',
@@ -922,7 +952,37 @@ const LANG = {
       oracle:'ฟรี: แปลงกำแพงเป็น ⭐ ไพ่ตาย'
     },
     streakLabel:'สตรีค', streakLegendary:'ตำนาน',
-    lblOpponent:'คู่แข่ง'
+    lblOpponent:'คู่แข่ง',
+    // Online match
+    goalLbl:'แรกถึง',
+    ptsLbl:'คะแนน',
+    rmTitle:'🌐 เล่นออนไลน์',
+    rmCopyBtn:'📋 คัดลอกลิงก์เชิญ',
+    rmCopied:'✓ คัดลอกแล้ว!',
+    rmSepTimer:'ตัวจับเวลา',
+    rmTimerQuestion:'กี่วินาทีต่อตา?',
+    rmSepGoal:'เป้าหมายการแข่ง',
+    rmGoalQuestion:'แรกถึงกี่แต้มชนะ?',
+    rmRoomCode:'รหัสห้อง',
+    rmJoin:'เข้าร่วมห้อง',
+    rmCancel:'ยกเลิก',
+    rmJoining:'⏳ กำลังเข้า…',
+    rmWaitingOpponent:'⏳ รอคู่แข่ง…',
+    rmRoomFound:'🔗 พบห้องแล้ว — คลิก เข้าร่วมห้อง เพื่อเชื่อมต่อ',
+    rmInvalidCode:'❌ ใส่รหัส 6 ตัวอักษรให้ถูกต้อง',
+    rmOppJoined:'✅ คู่แข่งเข้ามาแล้ว! กำลังเริ่ม…',
+    rmConnecting:'🔗 กำลังเชื่อมต่อ…',
+    rmConnected:'✅ เชื่อมต่อแล้ว! กำลังเริ่มเกม…',
+    rmWaitingHost:'⏳ รอโฮสต์…',
+    dcTitle:'คู่แข่งขาดการเชื่อมต่อ',
+    dcSub:'รอให้เขากลับเข้ามา…',
+    dcBtn:'กลับหน้าเมนู',
+    connLost:'หมดเวลาเชื่อมต่อ',
+    matchFound:'พบคู่แข่ง',
+    roleYou:       side => `คุณเล่น ${side === 'O' ? '○' : '✕'}`,
+    vsOpponent:    side => `vs ${side === 'O' ? 'X' : 'O'} — คู่แข่ง`,
+    matchGoalLabel: n  => n ? `🏆 แรกถึง ${n} ชนะ` : '∞ ไม่จำกัด',
+    startFight:'🞴 ต่อสู้!'
   }
 };
 
@@ -958,7 +1018,19 @@ function refreshUI() {
     'leg-freeze':'legFreeze', 'leg-star':'legStar',
     'btn-next':'btnNext', 'btn-reset':'btnReset',
     'ft-o':'frozen', 'ft-x':'frozen',
-    'lbl-t':'lblDraws'
+    'lbl-t':'lblDraws',
+    'goal-lbl':'goalLbl',
+    'pmc-score-lbl-o':'ptsLbl', 'pmc-score-lbl-x':'ptsLbl',
+    // Online room modal
+    'rm-title':'rmTitle', 'rm-copy-btn':'rmCopyBtn',
+    'rm-sep-timer':'rmSepTimer', 'rm-timer-lbl':'rmTimerQuestion',
+    'rm-sep-goal':'rmSepGoal',   'rm-goal-lbl':'rmGoalQuestion',
+    'rm-roomcode-lbl':'rmRoomCode',
+    'rm-cancel-btn':'rmCancel',
+    // Disconnect overlay
+    'dc-title':'dcTitle', 'dc-sub':'dcSub', 'dc-btn':'dcBtn',
+    // Start animation
+    'start-match':'matchFound'
   };
   // Re-translate overlay button if visible
   const ovBtn = document.getElementById('ov-btn');
@@ -1891,6 +1963,8 @@ function updateMiniCards() {
 
     // Score
     scoreEl.textContent = scores[p] ?? 0;
+    const lblEl = document.getElementById(`pmc-score-lbl-${lc}`);
+    if (lblEl) lblEl.textContent = t('ptsLbl');
 
     // Name label — mirrors lbl-o / lbl-x
     nameEl.textContent = document.getElementById(`lbl-${lc}`).textContent;
@@ -2804,8 +2878,8 @@ function openOnlineModal() {
   if (isGuest) {
     // Guest — pre-fill input from hash URL, show Join button
     document.getElementById('rm-join-input').value = hash;
-    setOnlineStatus('🔗 Room found — click Join Room to connect');
-    actionBtn.textContent = 'Join Room';
+    setOnlineStatus(t('rmRoomFound'));
+    actionBtn.textContent = t('rmJoin');
     actionBtn.style.display = 'block';
     actionBtn.disabled = false;
     cancelBtn.style.flex = '';
@@ -2814,7 +2888,7 @@ function openOnlineModal() {
     const id = genRoomId();
     window.location.hash = id;
     document.getElementById('rm-room-id').textContent = id;
-    setOnlineStatus('⏳ Waiting for opponent…');
+    setOnlineStatus(t('rmWaitingOpponent'));
     actionBtn.style.display = 'none';
     cancelBtn.style.flex = '1';
     hostRoom(id); // subscribe right away
@@ -2829,11 +2903,11 @@ function rmAction() {
   // Only called by guest Join Room button
   const code = document.getElementById('rm-join-input').value.toUpperCase().trim();
   if (!/^[A-Z0-9]{6}$/.test(code)) {
-    setOnlineStatus('❌ Enter a valid 6-character room code', 'err'); return;
+    setOnlineStatus(t('rmInvalidCode'), 'err'); return;
   }
   window.location.hash = code;
   const btn = document.getElementById('rm-action-btn');
-  btn.disabled = true; btn.textContent = '⏳ Joining…';
+  btn.disabled = true; btn.textContent = t('rmJoining');
   joinRoom(code);
 }
 
@@ -2845,8 +2919,8 @@ function setTimer(s) {
 function copyRoomLink() {
   const url = location.origin + location.pathname + location.hash;
   navigator.clipboard.writeText(url).then(() => {
-    document.getElementById('rm-copy-btn').textContent = '✓ Copied!';
-    setTimeout(() => document.getElementById('rm-copy-btn').textContent = '📋 Copy Invite Link', 1800);
+    document.getElementById('rm-copy-btn').textContent = t('rmCopied');
+    setTimeout(() => document.getElementById('rm-copy-btn').textContent = t('rmCopyBtn'), 1800);
   });
 }
 function genRoomId() {
@@ -2867,7 +2941,7 @@ function hostRoom(id) {
       if (payload.sender === mySide) return;
       switch(event) {
         case 'room:join':
-          setOnlineStatus('✅ Opponent joined! Starting…', 'ok');
+          setOnlineStatus(t('rmOppJoined'), 'ok');
           onlineMode = true; gameMode = 'online';
           scores={O:0,X:0,tie:0}; streaks={O:0,X:0}; round=1; cur='O'; feedLog=[];
           document.getElementById('feed').innerHTML = '';
@@ -2910,7 +2984,7 @@ function hostRoom(id) {
 /* ── Join room ─────────────────────────────────────────── */
 function joinRoom(id) {
   initSupa(); mySide = 'X';
-  setOnlineStatus('🔗 Connecting…');
+  setOnlineStatus(t('rmConnecting'));
   onlineChannel = sbClient.channel(`tactoe:${id}`, {
     config: { presence: { key: mySide } }
   })
@@ -2930,7 +3004,7 @@ function joinRoom(id) {
           onlineMode = true; gameMode = 'online';
           scores={O:0,X:0,tie:0}; streaks={O:0,X:0}; round=1;
           applyRemoteUI(payload.state);
-          setOnlineStatus('\u2705 Connected! Game starting\u2026', 'ok');
+          setOnlineStatus(t('rmConnected'), 'ok');
           setTimeout(() => { closeOnlineModal(); playStartAnimation(() => { activateOnlineUI(); updateOnlineTurnTimer(); }); }, 700);
           break;
         case 'game:move': case 'game:ability':
@@ -2957,7 +3031,7 @@ function joinRoom(id) {
       if (status === 'SUBSCRIBED') {
         await onlineChannel.track({ side: mySide });
         broadcastOnline('room:join');
-        setOnlineStatus('⏳ Waiting for host…');
+        setOnlineStatus(t('rmWaitingHost'));
       }
     });
 }
@@ -2983,7 +3057,7 @@ function handleDisconnect() {
     if (cd <= 0) {
       clearInterval(dcInterval);
       btn.style.display = 'block';
-      cdEl.textContent = 'Connection Lost';
+      cdEl.textContent = t('connLost');
     }
   }, 1000);
 }
@@ -3071,9 +3145,9 @@ function playStartAnimation(onDone) {
   const goalEl   = document.getElementById('start-goal-tag');
   const cdEl     = document.getElementById('start-cd');
 
-  const roleLabel = mySide === 'O' ? 'YOU ARE ○' : 'YOU ARE ✕';
-  const oppLabel  = mySide === 'O' ? 'vs X — Opponent' : 'vs O — Opponent';
-  const goalLabel = matchGoal ? `🏆 First to ${matchGoal} Wins` : '∞ Infinite Match';
+  const roleLabel = t('roleYou', mySide);
+  const oppLabel  = t('vsOpponent', mySide);
+  const goalLabel = t('matchGoalLabel', matchGoal);
 
   roleEl.textContent = roleLabel;
   roleEl.className   = `start-role ${mySide.toLowerCase()}`;
@@ -3086,7 +3160,7 @@ function playStartAnimation(onDone) {
   sndWin();
 
   // Countdown 3 → 2 → 1 → FIGHT!
-  const steps = ['3','2','1','🞴 FIGHT!'];
+  const steps = ['3','2','1', t('startFight')];
   let i = 0;
   function tick() {
     if (i >= steps.length) {
@@ -3102,13 +3176,14 @@ function playStartAnimation(onDone) {
       return;
     }
     const step = steps[i++];
+    const isFight = i === steps.length; // last step = fight/ต่อสู้
     // Re-trigger animation by swapping class
     cdEl.className = '';
     void cdEl.offsetWidth; // reflow
-    cdEl.className = step === '🞴 FIGHT!' ? 'start-go' : 'start-cd';
+    cdEl.className = isFight ? 'start-go' : 'start-cd';
     cdEl.textContent = step;
-    if (step !== '🞴 FIGHT!') sndPlace && sndPlace();
-    setTimeout(tick, step === '🞴 FIGHT!' ? 900 : 800);
+    if (!isFight) sndPlace && sndPlace();
+    setTimeout(tick, isFight ? 900 : 800);
   }
   setTimeout(tick, 900); // brief pause after role reveal
 }
@@ -3160,7 +3235,7 @@ function requestRematch() {
   } else {
     // Guest — send request to host
     broadcastOnline('game:rematch');
-    btn.textContent = '\u23f3 Waiting for host\u2026';
+    btn.textContent = t('rmWaitingHost');
     btn.classList.add('waiting');
     btn.disabled = true;
   }
