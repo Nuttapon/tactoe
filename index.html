@@ -463,6 +463,21 @@ body.light .ftag{ background:rgba(51,187,255,.08); }
 body.light .rm-card{ background:#fff; border-color:rgba(0,200,160,.25); }
 body.light .rm-id{ background:rgba(0,0,0,.04); color:#223344; border-color:rgba(0,0,0,.12); }
 body.light .rm-join-input{ background:rgba(0,0,0,.04); color:#223344; border-color:rgba(0,0,0,.12); }
+/* Win line SVG */
+#win-line-svg{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:5; overflow:visible; }
+#win-line-path{ fill:none; stroke-width:5; stroke-linecap:round; stroke-dasharray:600; stroke-dashoffset:600; }
+#win-line-path.o{ stroke:var(--o); filter:drop-shadow(0 0 8px rgba(0,255,204,.8)); }
+#win-line-path.x{ stroke:var(--x); filter:drop-shadow(0 0 8px rgba(255,51,85,.8)); }
+#win-line-path.anim{ animation:draw-line .45s cubic-bezier(.4,0,.2,1) .35s forwards; }
+@keyframes draw-line{ to{ stroke-dashoffset:0 } }
+/* First to N goal selector */
+.goal-bar{ display:flex; align-items:center; justify-content:center; gap:8px; margin:8px 0 2px; }
+.goal-lbl{ font-size:.6rem; color:#5a7a90; letter-spacing:.15em; text-transform:uppercase; }
+.goal-btn{ font-family:var(--font); font-size:.65rem; font-weight:700; letter-spacing:.08em; padding:4px 12px; border-radius:6px; border:1px solid rgba(255,255,255,.12); background:transparent; color:#7a9ab0; cursor:pointer; transition:all .2s; }
+.goal-btn.active{ border-color:var(--o); color:var(--o); background:rgba(0,255,204,.08); }
+.match-banner{ font-family:var(--font); font-size:.7rem; font-weight:700; letter-spacing:.15em; text-transform:uppercase; color:#ffd700; text-align:center; min-height:1.2em; margin-bottom:4px; animation:fd .4s ease both; }
+body.light .goal-btn{ color:#3a5a6a; border-color:rgba(0,0,0,.15); }
+body.light .goal-btn.active{ border-color:var(--o); color:var(--o); }
 </style>
 </head>
 <body>
@@ -504,6 +519,16 @@ body.light .rm-join-input{ background:rgba(0,0,0,.04); color:#223344; border-col
     <div class="sc x"        id="sc-x"><div class="sc-lbl" id="lbl-x">Player X</div><div class="sc-sym">X</div><div class="sc-pts" id="pts-x">0</div><div class="streak-badge" id="sb-x"></div></div>
   </div>
 
+  <!-- First to N goal selector -->
+  <div class="goal-bar">
+    <span class="goal-lbl" id="goal-lbl">First to</span>
+    <button class="goal-btn"        id="g-3" onclick="setMatchGoal(3)">3</button>
+    <button class="goal-btn"        id="g-5" onclick="setMatchGoal(5)">5</button>
+    <button class="goal-btn"        id="g-7" onclick="setMatchGoal(7)">7</button>
+    <button class="goal-btn active" id="g-0" onclick="setMatchGoal(0)">∞</button>
+  </div>
+  <div class="match-banner" id="match-banner"></div>
+
   <div class="status o" id="status">O's Turn</div>
 
   <div class="game-area">
@@ -521,6 +546,7 @@ body.light .rm-join-input{ background:rgba(0,0,0,.04); color:#223344; border-col
     <div class="board-wrap">
       <div class="timer-bar" id="timer-bar"><div class="timer-bar-fill" id="timer-bar-fill"></div></div>
       <div class="board" id="board"></div>
+      <svg id="win-line-svg" aria-hidden="true"><line id="win-line-path"/></svg>
       <div class="board-overlay" id="board-overlay">
         <div class="ov-result" id="ov-result"></div>
         <button class="ov-btn" id="ov-btn" onclick="nextRound()"></button>
@@ -1169,6 +1195,7 @@ function init() {
   for (let i = 0; i < cnt; i++) specials[pool[i+1]] = extras[i];
 
   syncModeUI();  // update labels, badges, mode buttons
+  clearWinLine(); // clear any previous win line
   buildBoard();
   renderAbs();
   const stLabel = gameMode !== '2p' && cur === BOT ? t('botFirst') : t('turn', cur);
@@ -1459,6 +1486,8 @@ function end(r) {
           .classList.add('wc', `p${r.p.toLowerCase()}`);
       }, order * 200);
     });
+    // Draw the win line after the last cell lights up
+    setTimeout(() => drawWinLine(r.ln, r.p), 420);
     setTimeout(() => {
       scores[r.p]++;
       streaks[r.p]++;
@@ -1473,6 +1502,8 @@ function end(r) {
       bumpScore(`pts-${r.p.toLowerCase()}`);
       updStreak(); updScFull(); renderAbs();
       if (onlineMode) broadcastOnline('game:end', { result: { type:r.type, p:r.p, ln:r.ln } });
+      // Check if this win ends the match
+      if (checkMatchWin(r.p)) return; // match over — no round overlay
       showOverlay(r);
     }, 1100);
   } else {
@@ -1707,8 +1738,9 @@ function fullReset() {
   feedLog = []; document.getElementById('feed').innerHTML = '';
   document.getElementById('sb-o').style.display = 'none';
   document.getElementById('sb-x').style.display = 'none';
+  document.getElementById('match-banner').textContent = '';
+  clearWinLine();
   if (onlineMode && mySide === 'O') {
-    // Host resets and broadcasts
     updScFull(); init();
     broadcastOnline('game:reset');
     return;
@@ -2664,6 +2696,111 @@ function activateOnlineUI() {
   document.getElementById('lbl-o').textContent = mySide==='O' ? t('lblYou') : t('lblOpponent');
   document.getElementById('lbl-x').textContent = mySide==='X' ? t('lblYou') : t('lblOpponent');
   if (onlineTimer > 0) document.getElementById('timer-bar').classList.add('visible');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   WINNING LINE ANIMATION
+══════════════════════════════════════════════════════════════ */
+
+function drawWinLine(ln, p) {
+  const board = document.getElementById('board');
+  const svg   = document.getElementById('win-line-svg');
+  const line  = document.getElementById('win-line-path');
+  if (!svg || !line || !ln || ln.length < 2) return;
+
+  // Get center of first and last winning cells relative to board-wrap
+  const bRect  = svg.parentElement.getBoundingClientRect();
+  const c0Rect = board.children[ln[0]].getBoundingClientRect();
+  const c2Rect = board.children[ln[ln.length-1]].getBoundingClientRect();
+
+  const x1 = c0Rect.left + c0Rect.width  / 2 - bRect.left;
+  const y1 = c0Rect.top  + c0Rect.height / 2 - bRect.top;
+  const x2 = c2Rect.left + c2Rect.width  / 2 - bRect.left;
+  const y2 = c2Rect.top  + c2Rect.height / 2 - bRect.top;
+
+  // Extend the line slightly beyond the cells
+  const dx  = x2 - x1, dy = y2 - y1;
+  const len = Math.sqrt(dx*dx + dy*dy);
+  const ext = 20; // pixels to extend each side
+  const ux  = dx / len, uy = dy / len;
+
+  line.setAttribute('x1', x1 - ux*ext);
+  line.setAttribute('y1', y1 - uy*ext);
+  line.setAttribute('x2', x2 + ux*ext);
+  line.setAttribute('y2', y2 + uy*ext);
+
+  // Set stroke length dynamically
+  const lineLen = len + ext*2 + 40;
+  line.style.strokeDasharray  = lineLen;
+  line.style.strokeDashoffset = lineLen;
+
+  line.className = p.toLowerCase();
+  // Force reflow so animation triggers
+  void line.getBoundingClientRect();
+  line.classList.add('anim');
+}
+
+function clearWinLine() {
+  const line = document.getElementById('win-line-path');
+  if (line) { line.className = ''; line.style.strokeDashoffset = '600'; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FIRST TO N MATCH MODE
+══════════════════════════════════════════════════════════════ */
+
+let matchGoal = 0;  // 0 = unlimited
+
+function setMatchGoal(n) {
+  matchGoal = n;
+  [0,3,5,7].forEach(v => {
+    const btn = document.getElementById(`g-${v}`);
+    if (btn) btn.classList.toggle('active', v === n);
+  });
+  document.getElementById('match-banner').textContent = '';
+  // Reset scores when changing goal
+  scores = { O:0, X:0, tie:0 };
+  streaks = { O:0, X:0 };
+  round = 1;
+  updScFull();
+  document.getElementById('sb-o').style.display = 'none';
+  document.getElementById('sb-x').style.display = 'none';
+  clearWinLine();
+  init();
+}
+
+/* Returns true if match is over (stops normal round overlay from showing) */
+function checkMatchWin(p) {
+  if (!matchGoal || scores[p] < matchGoal) return false;
+
+  // Match won!
+  const banner = document.getElementById('match-banner');
+  banner.textContent = `\uD83C\uDFC6 ${p} WINS THE MATCH! (${matchGoal} wins)`;
+
+  // Big celebration
+  fxLegendaryConfetti();
+  sndWin();
+
+  // Show a special full-screen match-over overlay reusing board overlay
+  const ov = document.getElementById('board-overlay');
+  const res = document.getElementById('ov-result');
+  const btn = document.getElementById('ov-btn');
+  res.innerHTML = `<span>${p} WINS<br>THE MATCH!</span><span style="font-size:1.8rem">${matchGoal} \u2605</span>`;
+  btn.textContent = 'Play Again';
+  btn.onclick = () => {
+    scores = {O:0,X:0,tie:0}; streaks = {O:0,X:0}; round = 1;
+    updScFull();
+    document.getElementById('sb-o').style.display = 'none';
+    document.getElementById('sb-x').style.display = 'none';
+    document.getElementById('match-banner').textContent = '';
+    btn.onclick = () => nextRound(); // restore
+    btn.textContent = t('nextRound');
+    clearWinLine();
+    init();
+  };
+  ov.classList.add('visible');
+  log(`\uD83C\uDFC6 ${p} wins the MATCH! First to ${matchGoal}.`);
+  return true;
 }
 
 /* ══ Boot ════════════════════════════════════════════════════ */
