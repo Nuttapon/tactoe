@@ -2054,18 +2054,20 @@ function syncModeUI() {
     const btn = document.getElementById(`m-${m}`);
     if (btn) btn.className = `mode-btn${gameMode===m ? ` active-${m}` : ''}`;
   });
-  const isBot = gameMode !== '2p';
-  document.getElementById('lbl-o').textContent = isBot ? t('lblYou') : t('lblO');
-  document.getElementById('lbl-x').textContent = isBot ? t('lblBot') : t('lblX');
-  updateMiniCards();
-  const shX = document.getElementById('sh-x');
-  if (isBot) {
-    const labels = { easy:'EASY', hard:'HARD', expert:'EXPERT', grandmaster:'👑 MASTER' };
-    shX.innerHTML = `— X — <span class="bot-badge">${labels[gameMode]||gameMode.toUpperCase()}</span>`;
-  } else {
-    shX.textContent = '— X —';
+  if (!onlineMode) {
+    const isBot = gameMode !== '2p';
+    document.getElementById('lbl-o').textContent = isBot ? t('lblYou') : t('lblO');
+    document.getElementById('lbl-x').textContent = isBot ? t('lblBot') : t('lblX');
+    const shX = document.getElementById('sh-x');
+    if (isBot) {
+      const labels = { easy:'EASY', hard:'HARD', expert:'EXPERT', grandmaster:'👑 MASTER' };
+      shX.innerHTML = `— X — <span class="bot-badge">${labels[gameMode]||gameMode.toUpperCase()}</span>`;
+    } else {
+      shX.textContent = '— X —';
+    }
+    document.getElementById('sh-o').textContent = '— O —';
   }
-  document.getElementById('sh-o').textContent = '— O —';
+  updateMiniCards();
 }
 
 /* ── Schedule bot turn with a human-readable delay ────────── */
@@ -3042,6 +3044,8 @@ function activateOnlineUI() {
   document.getElementById('m-online').className = 'mode-btn active-online';
   document.getElementById('lbl-o').textContent = mySide==='O' ? t('lblYou') : t('lblOpponent');
   document.getElementById('lbl-x').textContent = mySide==='X' ? t('lblYou') : t('lblOpponent');
+  document.getElementById('sh-o').textContent = '— O —';
+  document.getElementById('sh-x').textContent = '— X —';
   updateMiniCards();
   if (onlineTimer > 0) document.getElementById('timer-bar').classList.add('visible');
   document.getElementById('emote-bar').classList.add('visible');
