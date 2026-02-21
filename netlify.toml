@@ -1,0 +1,6 @@
+[build]
+  # Inject Supabase credentials from Netlify environment variables at build time.
+  # Set SUPA_URL and SUPA_KEY in:
+  #   Netlify Dashboard → Site Settings → Environment Variables
+  command = "sed -i 's|SUPA_URL_PLACEHOLDER|'\"$SUPA_URL\"'|g; s|SUPA_KEY_PLACEHOLDER|'\"$SUPA_KEY\"'|g' index.html"
+  publish = "."

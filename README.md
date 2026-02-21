@@ -193,15 +193,55 @@ TACTOE (single index.html)
 
 ## 🚀 Getting Started
 
-```bash
-# Clone the repository
-git clone https://github.com/your-username/tactoe.git
+### ▶ Just Play (Local, No Setup)
 
-# Open in browser
-open index.html
+```bash
+git clone https://github.com/Nuttapon/tactoe.git
+open index.html   # or double-click the file
 ```
 
-Or simply double-click `index.html`. Done.
+> ⚠️ **Note:** The `index.html` in this repo has Supabase credentials replaced with placeholders (`SUPA_URL_PLACEHOLDER` / `SUPA_KEY_PLACEHOLDER`). Opening it directly works for **all local game modes** (2P, Bot), but **Online mode requires the credentials below**.
+
+---
+
+### 🌐 Online Multiplayer Setup
+
+Online mode uses [Supabase Realtime](https://supabase.com) for real-time room sync. To enable it you need your own free Supabase project.
+
+#### Option A — Local dev with `dev.sh`
+
+1. Create a **free** Supabase project at [supabase.com](https://supabase.com)
+2. Go to **Settings → API** and copy your `Project URL` and `anon` key
+3. Create `.env.local` in the repo root (already gitignored):
+
+```bash
+SUPA_URL=https://your-project.supabase.co
+SUPA_KEY=your-anon-key
+```
+
+4. Run the dev helper script:
+
+```bash
+./dev.sh    # creates index.dev.html with keys injected and opens it
+```
+
+#### Option B — Deploy to Netlify
+
+1. Fork this repo
+2. Connect to [Netlify](https://netlify.com)
+3. In **Site Settings → Environment Variables**, add:
+   - `SUPA_URL` = your Supabase Project URL
+   - `SUPA_KEY` = your Supabase anon key
+4. Deploy — `netlify.toml` injects the keys automatically at build time
+
+---
+
+### 🎮 Playing Online
+
+1. Click **🌐 Online** in the mode bar
+2. **Host**: A room code is generated automatically → click **📋 Copy Invite Link** → send to your friend → choose timer (5 / 10 / 15s or Off) → wait
+3. **Guest**: Open the invite link → room code is pre-filled → click **Join Room**
+4. Game starts automatically — host plays as **O**, guest plays as **X**
 
 ---
 
@@ -211,6 +251,7 @@ Requires a modern browser with support for:
 - `Web Audio API` (AudioContext)
 - `Canvas 2D API`
 - ES6+ (classes, arrow functions, destructuring, `Map`, `Set`)
+- WebSocket (for online mode)
 
 ✅ Chrome, Edge, Firefox, Safari (latest versions)
 

@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>TACTICAL TACTOE</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
 <style>
 /* ══ Root tokens ══════════════════════════════════════════ */
@@ -424,6 +425,44 @@ body.light .ftag{ background:rgba(51,187,255,.08); }
   .ctrl-bar{ top:10px; right:10px; gap:5px; }
   .ctrl-bar button{ padding:7px 9px; font-size:.85rem; }
 }
+/* ══ Online Mode CSS ═══════════════════════════════════ */
+.mode-btn.active-online{
+  background:rgba(51,187,255,.1); border-color:rgba(51,187,255,.5);
+  color:#33bbff; box-shadow:0 0 12px rgba(51,187,255,.2);
+}
+/* Timer bar */
+.timer-bar{ width:100%; height:5px; background:rgba(255,255,255,.07); border-radius:3px; margin-bottom:10px; display:none; overflow:hidden; }
+.timer-bar.visible{ display:block; }
+.timer-bar-fill{ height:100%; width:100%; border-radius:3px; background:var(--o); transition:background .3s; }
+.timer-bar-fill.danger{ background:var(--x); }
+/* Room modal */
+.rm-overlay{ position:fixed; inset:0; z-index:3000; background:rgba(4,8,16,.9); backdrop-filter:blur(10px); display:none; align-items:center; justify-content:center; }
+.rm-overlay.open{ display:flex; }
+.rm-card{ background:var(--panel); border:1px solid rgba(0,255,204,.2); border-radius:20px; padding:34px 38px; width:min(440px,94vw); text-align:center; }
+.rm-title{ font-family:var(--font); font-size:1.35rem; font-weight:700; color:var(--o); letter-spacing:.1em; margin-bottom:4px; }
+.rm-sub{ font-size:.65rem; color:#5a7a90; letter-spacing:.18em; text-transform:uppercase; margin-bottom:22px; }
+.rm-id{ font-family:var(--mono); font-size:2rem; letter-spacing:.3em; color:#e0f0ff; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); border-radius:10px; padding:14px 20px; margin-bottom:10px; }
+.rm-copy{ font-family:var(--font); font-size:.72rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:8px 20px; border-radius:7px; border:1px solid var(--o); color:var(--o); background:transparent; cursor:pointer; margin-bottom:18px; transition:all .2s; display:block; width:100%; }
+.rm-copy:hover{ background:rgba(0,255,204,.08); }
+.rm-sep{ font-size:.6rem; color:#4a6a7a; letter-spacing:.2em; text-transform:uppercase; margin:16px 0 12px; }
+.rm-timer-lbl{ font-size:.62rem; color:#5a7a90; letter-spacing:.15em; text-transform:uppercase; margin-bottom:10px; }
+.rm-timer-opts{ display:flex; gap:8px; justify-content:center; margin-bottom:20px; }
+.rm-t{ font-family:var(--font); font-size:.7rem; font-weight:700; letter-spacing:.08em; padding:7px 14px; border-radius:7px; border:1px solid rgba(255,255,255,.12); background:transparent; color:#7a9ab0; cursor:pointer; transition:all .2s; }
+.rm-t.sel{ border-color:var(--o); color:var(--o); background:rgba(0,255,204,.08); }
+.rm-status{ font-family:var(--font); font-size:.82rem; color:#7a9ab0; min-height:1.8em; margin-bottom:16px; letter-spacing:.05em; }
+.rm-status.ok{ color:var(--o); } .rm-status.err{ color:var(--x); }
+.rm-join-input{ font-family:var(--mono); font-size:1.2rem; letter-spacing:.2em; text-align:center; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:12px 18px; color:#e0f0ff; width:100%; margin-bottom:12px; text-transform:uppercase; }
+.rm-join-input::placeholder{ color:#4a6a7a; }
+.rm-btn-row{ display:flex; gap:10px; margin-bottom:14px; }
+.rm-btn{ flex:1; font-family:var(--font); font-size:.78rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:12px; border-radius:9px; border:1px solid; cursor:pointer; transition:all .2s; }
+.rm-btn.primary{ border-color:var(--o); color:var(--o); background:rgba(0,255,204,.07); }
+.rm-btn.primary:hover{ background:rgba(0,255,204,.15); }
+.rm-btn.secondary{ border-color:rgba(255,255,255,.15); color:#778899; background:transparent; }
+.rm-btn.secondary:hover{ background:rgba(255,255,255,.06); color:#aaa; }
+.rm-disc{ font-size:.6rem; color:#4a6a7a; margin-top:8px; }
+body.light .rm-card{ background:#fff; border-color:rgba(0,200,160,.25); }
+body.light .rm-id{ background:rgba(0,0,0,.04); color:#223344; border-color:rgba(0,0,0,.12); }
+body.light .rm-join-input{ background:rgba(0,0,0,.04); color:#223344; border-color:rgba(0,0,0,.12); }
 </style>
 </head>
 <body>
@@ -456,6 +495,7 @@ body.light .ftag{ background:rgba(51,187,255,.08); }
     <button class="mode-btn"           id="m-hard"        onclick="setMode('hard')">🤖 Hard</button>
     <button class="mode-btn"           id="m-expert"      onclick="setMode('expert')">🧠 Expert</button>
     <button class="mode-btn"           id="m-grandmaster" onclick="setMode('grandmaster')">👑 Master</button>
+    <button class="mode-btn"           id="m-online"      onclick="openOnlineModal()">🌐 Online</button>
   </div>
 
   <div class="scoreboard">
@@ -479,6 +519,7 @@ body.light .ftag{ background:rgba(51,187,255,.08); }
     </div>
 
     <div class="board-wrap">
+      <div class="timer-bar" id="timer-bar"><div class="timer-bar-fill" id="timer-bar-fill"></div></div>
       <div class="board" id="board"></div>
       <div class="board-overlay" id="board-overlay">
         <div class="ov-result" id="ov-result"></div>
@@ -517,6 +558,43 @@ body.light .ftag{ background:rgba(51,187,255,.08); }
   </div>
 
 </div><!-- /wrap -->
+
+<!-- ── Online Room Modal ────────────────────────────────────────── -->
+<div class="rm-overlay" id="room-modal">
+  <div class="rm-card">
+    <div class="rm-title">🌐 Online Multiplayer</div>
+    <div class="rm-sub" id="rm-sub">TACTICAL TACTOE</div>
+
+    <!-- Host section: auto-created, no action needed -->
+    <div id="rm-host-section">
+      <div class="rm-id" id="rm-room-id">------</div>
+      <button class="rm-copy" id="rm-copy-btn" onclick="copyRoomLink()">📋 Copy Invite Link</button>
+      <div class="rm-sep">Turn Timer</div>
+      <div class="rm-timer-lbl" id="rm-timer-lbl">How many seconds per turn?</div>
+      <div class="rm-timer-opts">
+        <button class="rm-t" onclick="setTimer(5)">5s</button>
+        <button class="rm-t sel" onclick="setTimer(10)">10s</button>
+        <button class="rm-t" onclick="setTimer(15)">15s</button>
+        <button class="rm-t" onclick="setTimer(0)">Off</button>
+      </div>
+    </div>
+
+    <!-- Guest section: pre-filled from URL hash -->
+    <div id="rm-guest-section" style="display:none">
+      <div class="rm-timer-lbl">Room Code</div>
+      <input class="rm-join-input" id="rm-join-input" placeholder="ABC123" maxlength="6"
+        oninput="this.value=this.value.toUpperCase()"/>
+    </div>
+
+    <div class="rm-status" id="rm-status">⏳ Waiting…</div>
+
+    <div class="rm-btn-row">
+      <!-- Host: no primary action (room already created) | Guest: Join Room -->
+      <button class="rm-btn primary" id="rm-action-btn" onclick="rmAction()" style="display:none">Join Room</button>
+      <button class="rm-btn secondary" id="rm-cancel-btn" onclick="closeOnlineModal()" style="flex:1">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <script>
 /* ═══════════════════════════════════════════════════════════════
@@ -583,7 +661,8 @@ const LANG = {
       extra: 'Instant! Place twice this turn.',
       oracle:'Free: convert a random Wall into a ⭐ Wildcard.'
     },
-    streakLabel:'STREAK', streakLegendary:'LEGENDARY'
+    streakLabel:'STREAK', streakLegendary:'LEGENDARY',
+    lblOpponent:'OPPONENT'
   },
   th: {
     eyebrow:'ฉบับยุทธวิธี', tsub:'ไอเทม & ความสามารถ',
@@ -610,7 +689,8 @@ const LANG = {
       extra: 'ทันที! วางได้ 2 ครั้งในตานี้',
       oracle:'ฟรี: แปลงกำแพงเป็น ⭐ ไพ่ตาย'
     },
-    streakLabel:'สตรีค', streakLegendary:'ตำนาน'
+    streakLabel:'สตรีค', streakLegendary:'ตำนาน',
+    lblOpponent:'คู่แข่ง'
   }
 };
 
@@ -1152,8 +1232,10 @@ function render() {
 function click(i) {
   if (over) return;
   // Block human from clicking when it's the bot's turn
-  if (gameMode !== '2p' && cur === BOT) return;
+  if (gameMode !== '2p' && gameMode !== 'online' && cur === BOT) return;
   if (botThinking) return;
+  // Block clicks when it's not your side in online mode
+  if (onlineMode && cur !== mySide) return;
   const ap = ab.O.active ? 'O' : ab.X.active ? 'X' : null;
   if (ap) { abilTarget(ap, i); return; }
   if (board[i] || specials[i] === 'wall') return;
@@ -1192,8 +1274,13 @@ function place(i, p) {
   }
 
   render();
-  const r = check(); if (r) { end(r); return; }
+  const r = check();
+  if (r) {
+    if (onlineMode) broadcastOnline('game:move');
+    end(r); return;
+  }
   endAction();
+  if (onlineMode) broadcastOnline('game:move');
 }
 
 /* ── Bomb: destroy a random unshielded neighbor ───────────── */
@@ -1243,15 +1330,16 @@ function advTurn() {
   if (frozen === opp) {
     frozen = null;
     showFrozen(opp);
-    log(`❄️ ${opp} frozen — ${cur} plays again!`);
+    log(`❌️ ${opp} frozen — ${cur} plays again!`);
     // cur stays the same — opponent's turn is skipped
   } else {
     cur = opp;
   }
-  const stLabel = gameMode !== '2p' && cur === BOT ? t('botTurn') : t('turn', cur);
+  const stLabel = gameMode !== '2p' && gameMode !== 'online' && cur === BOT
+    ? t('botTurn') : t('turn', cur);
   setSt(stLabel, cur.toLowerCase());
   updSc(); renderAbs();
-  // If the new current player is the bot, schedule its move
+  if (onlineMode) { startTurnTimer(); return; }
   scheduleBotTurn();
 }
 
@@ -1364,16 +1452,13 @@ function fxLegendaryConfetti() {
 function end(r) {
   over = true;
   if (r.type === 'win') {
-    // 1. Status line updates immediately so player knows who won
     setSt(t('wins', r.p), r.p.toLowerCase());
-    // 2. Stagger winning-line cell highlights (180 ms apart) — player sees the line
     r.ln.forEach((idx, order) => {
       setTimeout(() => {
         document.getElementById('board').children[idx]
           .classList.add('wc', `p${r.p.toLowerCase()}`);
       }, order * 200);
     });
-    // 3. After cells are all lit (~600ms + buffer), fire confetti + score + overlay
     setTimeout(() => {
       scores[r.p]++;
       streaks[r.p]++;
@@ -1387,17 +1472,18 @@ function end(r) {
       else               { sndWin(); fxWin(); }
       bumpScore(`pts-${r.p.toLowerCase()}`);
       updStreak(); updScFull(); renderAbs();
+      if (onlineMode) broadcastOnline('game:end', { result: { type:r.type, p:r.p, ln:r.ln } });
       showOverlay(r);
     }, 1100);
   } else {
     scores.tie++;
-    // Draws preserve streaks — no reset
     setSt(t('draw'), 'tie');
     sndDraw();
     setTimeout(() => {
       log(`\uD83E\uDD1D Round ${round} ends in a draw.`);
       bumpScore('pts-t');
       updScFull(); renderAbs();
+      if (onlineMode) broadcastOnline('game:end', { result: { type:'draw' } });
       showOverlay(r);
     }, 500);
   }
@@ -1419,21 +1505,25 @@ function useAbility(p) {
   /* ORACLE — free bonus, no turn cost */
   if (t === 'oracle') {
     const ws = specials.map((s,i) => s==='wall' ? i : -1).filter(i => i >= 0);
-    if (!ws.length) { log(`🔮 No walls left to convert!`); return; }
+    if (!ws.length) { log(`\uD83D\uDD2E No walls left to convert!`); return; }
     a.used = true;
     const pk = ws[0 | Math.random() * ws.length];
     specials[pk] = 'star';
-    log(`🔮 ${p} ORACLE: Wall → ⭐ Wildcard!`);
-    sndOracle(); fxOracle(pk); floatTxt(pk, '🔮 WALL→STAR', '#cc88ff');
-    render(); renderAbs(); return;
+    log(`\uD83D\uDD2E ${p} ORACLE: Wall \u2192 \u2B50 Wildcard!`);
+    sndOracle(); fxOracle(pk); floatTxt(pk, '\uD83D\uDD2E WALL\u2192STAR', '#cc88ff');
+    render(); renderAbs();
+    if (onlineMode) broadcastOnline('game:ability');
+    return;
   }
 
   /* EXTRA TURN — instant, queues second move */
   if (t === 'extra') {
-    if (cur !== p) { log(`⚡ Extra Turn only usable on YOUR turn!`); return; }
+    if (cur !== p) { log(`\u26A1 Extra Turn only usable on YOUR turn!`); return; }
     a.used = true; a.ep = true;
-    log(`⚡ ${p} armed EXTRA — two moves this turn!`);
-    sndActivate(); renderAbs(); return;
+    log(`\u26A1 ${p} armed EXTRA \u2014 two moves this turn!`);
+    sndActivate(); renderAbs();
+    if (onlineMode) broadcastOnline('game:ability');
+    return;
   }
 
   /* Targeted abilities (Nuke / Shield / Swap) — require own turn */
@@ -1461,10 +1551,11 @@ function abilTarget(p, i) {
       sndNukeBlock(); a.active = false; a.used = true; clearTgt(); renderAbs(); return;
     }
     board[i] = null; a.active = false; a.used = true; clearTgt();
-    log(`💥 ${p} NUKED ${b.p}'s cell ${i+1}!`);
-    sndNuke(); fxNuke(i); floatTxt(i, '💥 NUKED!', '#ff3355');
+    log(`\uD83D\uDCA5 ${p} NUKED ${b.p}'s cell ${i+1}!`);
+    sndNuke(); fxNuke(i); floatTxt(i, '\uD83D\uDCA5 NUKED!', '#ff3355');
     render(); renderAbs();
-    const r = check(); if (r) { end(r); return; }
+    const r = check(); if (r) { if (onlineMode) broadcastOnline('game:ability', { type: t, p: p, target: i }); end(r); return; }
+    if (onlineMode) broadcastOnline('game:ability', { type: t, p: p, target: i });
     advTurn(); return;
   }
 
@@ -1473,9 +1564,11 @@ function abilTarget(p, i) {
     if (!b)       { log(`🛡️ Click one of YOUR cells.`); return; }
     if (b.p !== p){ log(`🛡️ Only your own cells!`); return; }
     board[i].sh = true; a.active = false; a.used = true; clearTgt();
-    log(`🛡️ ${p} shielded cell ${i+1}!`);
-    sndShield(); fxShield(i); floatTxt(i, '🛡️ SHIELDED', '#33bbff');
-    render(); renderAbs(); advTurn(); return;
+    log(`\uD83D\uDEE1\uFE0F ${p} shielded cell ${i+1}!`);
+    sndShield(); fxShield(i); floatTxt(i, '\uD83D\uDEE1\uFE0F SHIELDED', '#33bbff');
+    render(); renderAbs();
+    if (onlineMode) broadcastOnline('game:ability', { type: t, p: p, target: i });
+    advTurn(); return;
   }
 
   if (t === 'swap') {
@@ -1493,10 +1586,11 @@ function abilTarget(p, i) {
       const f = a.sf;
       [board[f], board[i]] = [board[i], board[f]];
       a.active = false; a.used = true; a.ss = 0; a.sf = -1; clearTgt();
-      log(`🔄 ${p} swapped cells ${f+1} ↔ ${i+1}!`);
+      log(`\uD83D\uDD04 ${p} swapped cells ${f+1} \u2194 ${i+1}!`);
       sndSwap(); fxSwap(f, i);
       render(); renderAbs();
-      const r = check(); if (r) { end(r); return; }
+      const r = check(); if (r) { if (onlineMode) broadcastOnline('game:ability', { type: t, p: p, target1: f, target2: i }); end(r); return; }
+      if (onlineMode) broadcastOnline('game:ability', { type: t, p: p, target1: f, target2: i });
       advTurn();
     }
   }
@@ -1543,7 +1637,7 @@ function updScFull() {
 function renderAbs() {
   for (const p of ['O','X']) {
     const a = ab[p], info = ABIL[a.type] || {}, lc = p.toLowerCase();
-    const isBot = gameMode !== '2p' && p === BOT;
+    const isBot = gameMode !== '2p' && gameMode !== 'online' && p === BOT;
 
     document.getElementById(`ai-${lc}`).textContent = info.icon || '?';
     document.getElementById(`an-${lc}`).textContent = info.name || '—';
@@ -1591,13 +1685,34 @@ function shuffle(a) {
 }
 
 /* ══ SESSION CONTROLS ════════════════════════════════════════ */
-function nextRound() { round++; init(); }
+function nextRound() {
+  if (onlineMode) {
+    if (mySide === 'O') {
+      // Host generates new round and broadcasts
+      round++; init();
+      broadcastOnline('game:next_round');
+    } else {
+      // Guest requests host to generate round
+      broadcastOnline('game:req_nr');
+      const btn = document.getElementById('ov-btn');
+      if (btn) { btn.textContent = '\u23F3 Waiting\u2026'; btn.disabled = true; }
+    }
+    return;
+  }
+  round++; init();
+}
 
 function fullReset() {
   scores = { O:0, X:0, tie:0 }; streaks = { O:0, X:0 }; round = 1; cur = 'O';
   feedLog = []; document.getElementById('feed').innerHTML = '';
   document.getElementById('sb-o').style.display = 'none';
   document.getElementById('sb-x').style.display = 'none';
+  if (onlineMode && mySide === 'O') {
+    // Host resets and broadcasts
+    updScFull(); init();
+    broadcastOnline('game:reset');
+    return;
+  }
   updScFull(); init();
 }
 
@@ -1655,6 +1770,7 @@ function syncModeUI() {
 
 /* ── Schedule bot turn with a human-readable delay ────────── */
 function scheduleBotTurn() {
+  if (onlineMode) return; // no bots in online mode
   if (gameMode === '2p' || cur !== BOT || over || botThinking) return;
   botThinking = true;
   renderAbs();  // show thinking dots on bot's ability button
@@ -2302,13 +2418,268 @@ function botAbilGrandmaster() {
   return false;
 }
 
+/* ══════════════════════════════════════════════════════════════
+   ONLINE MULTIPLAYER ENGINE — Supabase Realtime Broadcast
+   Host = O (creates room), Guest = X (joins via URL hash)
+   State sync: broadcast full board state after every action.
+   Turn timer: rAF countdown, auto-passes turn on expire.
+══════════════════════════════════════════════════════════════ */
+
+const SUPA_URL = 'SUPA_URL_PLACEHOLDER';
+const SUPA_KEY = 'SUPA_KEY_PLACEHOLDER';
+
+let onlineMode    = false;  // active online session
+let mySide        = null;   // 'O' (host) or 'X' (guest)
+let onlineChannel = null;   // Supabase channel
+let onlineTimer   = 10;     // seconds (configured by host)
+let timerEnd      = 0;
+let timerRAF      = null;
+let sbClient      = null;
+let pendingNR     = false;  // guest waiting for host to init next round
+
+function initSupa() {
+  if (!sbClient) sbClient = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+}
+
+/* ── State serialisation ───────────────────────────────────── */
+function getNetState() {
+  return JSON.parse(JSON.stringify({ board, specials, cur, over, frozen, round, scores, streaks, ab }));
+}
+function applyNetState(s) {
+  board=s.board; specials=s.specials; cur=s.cur; over=s.over;
+  frozen=s.frozen; round=s.round; scores=s.scores; streaks=s.streaks; ab=s.ab;
+}
+function broadcastOnline(event, extra = {}) {
+  if (!onlineChannel) return;
+  onlineChannel.send({ type:'broadcast', event, payload:{ ...extra, sender:mySide, state:getNetState() } });
+}
+
+/* ── Apply remote state to DOM ──────────────────────────── */
+function applyRemoteUI(s) {
+  applyNetState(s);
+  document.getElementById('board-overlay').classList.remove('visible');
+  buildBoard(); render(); renderAbs(); updSc(); updScFull(); updStreak();
+  syncModeUI();
+  document.getElementById('rtag').textContent = t('round', round);
+  if (!over) setSt(t('turn', cur), cur.toLowerCase());
+  updateOnlineTurnTimer();
+}
+
+/* ── Turn timer ────────────────────────────────────────── */
+function updateOnlineTurnTimer() {
+  if (!onlineMode || over) { clearTurnTimer(); return; }
+  if (cur === mySide) startTurnTimer();
+  else clearTurnTimer();
+}
+function startTurnTimer() {
+  if (!onlineMode || onlineTimer === 0) return;
+  clearTurnTimer();
+  timerEnd = Date.now() + onlineTimer * 1000;
+  document.getElementById('timer-bar').classList.add('visible');
+  tickTimer();
+}
+function tickTimer() {
+  const fill = document.getElementById('timer-bar-fill');
+  const remaining = timerEnd - Date.now();
+  if (remaining <= 0) {
+    if (fill) { fill.style.width='0%'; fill.classList.remove('danger'); }
+    clearTurnTimer();
+    if (cur === mySide && !over) { broadcastOnline('game:timer'); advTurn(); }
+    return;
+  }
+  const pct = (remaining / (onlineTimer * 1000)) * 100;
+  if (fill) { fill.style.width = pct + '%'; fill.classList.toggle('danger', pct < 25); }
+  timerRAF = requestAnimationFrame(tickTimer);
+}
+function clearTurnTimer() {
+  if (timerRAF) { cancelAnimationFrame(timerRAF); timerRAF = null; }
+  const fill = document.getElementById('timer-bar-fill');
+  if (fill) { fill.style.width = '100%'; fill.classList.remove('danger'); }
+}
+
+/* ── Modal helpers ──────────────────────────────────────── */
+function openOnlineModal() {
+  const hash = window.location.hash.slice(1).toUpperCase();
+  const isGuest = /^[A-Z0-9]{6}$/.test(hash);
+
+  document.getElementById('rm-host-section').style.display = isGuest ? 'none' : 'block';
+  document.getElementById('rm-guest-section').style.display = isGuest ? 'block' : 'none';
+
+  const actionBtn   = document.getElementById('rm-action-btn');
+  const cancelBtn   = document.getElementById('rm-cancel-btn');
+
+  if (isGuest) {
+    // Guest — pre-fill input from hash URL, show Join button
+    document.getElementById('rm-join-input').value = hash;
+    setOnlineStatus('🔗 Room found — click Join Room to connect');
+    actionBtn.textContent = 'Join Room';
+    actionBtn.style.display = 'block';
+    actionBtn.disabled = false;
+    cancelBtn.style.flex = '';
+  } else {
+    // Host — auto-generate room, subscribe immediately, no action button needed
+    const id = genRoomId();
+    window.location.hash = id;
+    document.getElementById('rm-room-id').textContent = id;
+    setOnlineStatus('⏳ Waiting for opponent…');
+    actionBtn.style.display = 'none';
+    cancelBtn.style.flex = '1';
+    hostRoom(id); // subscribe right away
+  }
+
+  document.getElementById('room-modal').classList.add('open');
+}
+function closeOnlineModal() {
+  document.getElementById('room-modal').classList.remove('open');
+}
+function rmAction() {
+  // Only called by guest Join Room button
+  const code = document.getElementById('rm-join-input').value.toUpperCase().trim();
+  if (!/^[A-Z0-9]{6}$/.test(code)) {
+    setOnlineStatus('❌ Enter a valid 6-character room code', 'err'); return;
+  }
+  window.location.hash = code;
+  const btn = document.getElementById('rm-action-btn');
+  btn.disabled = true; btn.textContent = '⏳ Joining…';
+  joinRoom(code);
+}
+
+function setTimer(s) {
+  onlineTimer = s;
+  document.querySelectorAll('.rm-t').forEach(b => b.classList.remove('sel'));
+  event.target.classList.add('sel');
+}
+function copyRoomLink() {
+  const url = location.origin + location.pathname + location.hash;
+  navigator.clipboard.writeText(url).then(() => {
+    document.getElementById('rm-copy-btn').textContent = '✓ Copied!';
+    setTimeout(() => document.getElementById('rm-copy-btn').textContent = '📋 Copy Invite Link', 1800);
+  });
+}
+function genRoomId() {
+  return Math.random().toString(36).slice(2,8).toUpperCase();
+}
+function setOnlineStatus(msg, cls = '') {
+  const el = document.getElementById('rm-status');
+  el.textContent = msg; el.className = 'rm-status' + (cls ? ' '+cls : '');
+}
+
+/* ── Host room ─────────────────────────────────────────── */
+function hostRoom(id) {
+  initSupa(); mySide = 'O';
+  onlineChannel = sbClient.channel(`tactoe:${id}`)
+    .on('broadcast', { event:'*' }, ({ event, payload }) => {
+      if (payload.sender === mySide) return;
+      switch(event) {
+        case 'room:join':
+          setOnlineStatus('✅ Opponent joined! Starting…', 'ok');
+          onlineMode = true; gameMode = 'online';
+          scores={O:0,X:0,tie:0}; streaks={O:0,X:0}; round=1; cur='O'; feedLog=[];
+          document.getElementById('feed').innerHTML = '';
+          init(); // host generates board
+          broadcastOnline('room:ready', { timerSecs: onlineTimer });
+          setTimeout(() => { closeOnlineModal(); activateOnlineUI(); startTurnTimer(); }, 700);
+          break;
+        case 'game:move': case 'game:ability':
+          applyRemoteUI(payload.state); break;
+        case 'game:end':   onRemoteEnd(payload); break;
+        case 'game:next_round': onRemoteNextRound(payload); break;
+        case 'game:reset':  applyRemoteUI(payload.state); break;
+        case 'game:timer':  if(cur!==mySide){ clearTurnTimer(); advTurn(); } break;
+        case 'game:req_nr': // guest requests next round — host generates
+          round++; init();
+          broadcastOnline('game:next_round');
+          break;
+      }
+    })
+    .subscribe();
+}
+
+/* ── Join room ─────────────────────────────────────────── */
+function joinRoom(id) {
+  initSupa(); mySide = 'X';
+  setOnlineStatus('🔗 Connecting…');
+  onlineChannel = sbClient.channel(`tactoe:${id}`)
+    .on('broadcast', { event:'*' }, ({ event, payload }) => {
+      if (payload.sender === mySide) return;
+      switch(event) {
+        case 'room:ready':
+          onlineTimer = payload.timerSecs;
+          onlineMode = true; gameMode = 'online';
+          scores={O:0,X:0,tie:0}; streaks={O:0,X:0}; round=1;
+          applyRemoteUI(payload.state);
+          setOnlineStatus('✅ Connected! Game starting…', 'ok');
+          setTimeout(() => { closeOnlineModal(); activateOnlineUI(); updateOnlineTurnTimer(); }, 700);
+          break;
+        case 'game:move': case 'game:ability':
+          applyRemoteUI(payload.state); break;
+        case 'game:end':   onRemoteEnd(payload); break;
+        case 'game:next_round': onRemoteNextRound(payload); break;
+        case 'game:reset':  applyRemoteUI(payload.state); break;
+        case 'game:timer':  if(cur!==mySide){ clearTurnTimer(); advTurn(); } break;
+      }
+    })
+    .subscribe(status => {
+      if (status === 'SUBSCRIBED') {
+        broadcastOnline('room:join');
+        setOnlineStatus('⏳ Waiting for host…');
+      }
+    });
+}
+
+/* ── Remote event handlers ────────────────────────────────── */
+function onRemoteEnd({ state, result }) {
+  applyNetState(state);
+  // Stagger winning cell highlights same as local
+  if (result && result.type === 'win') {
+    result.ln.forEach((idx, order) => {
+      setTimeout(() => {
+        const el = document.getElementById('board').children[idx];
+        if (el) el.classList.add('wc', `p${result.p.toLowerCase()}`);
+      }, order * 200);
+    });
+    setSt(t('wins', result.p), result.p.toLowerCase());
+    sndWin();
+    const n = streaks[result.p];
+    if (n>=5) fxLegendaryConfetti(); else if (n===4) fxGoldConfetti();
+    else if (n===3) fxFireConfetti(); else fxWin();
+    bumpScore(`pts-${result.p.toLowerCase()}`);
+  } else {
+    setSt(t('draw'), 'tie');
+    sndDraw(); bumpScore('pts-t');
+  }
+  updScFull(); updStreak(); renderAbs();
+  clearTurnTimer();
+  setTimeout(() => showOverlay(result), 200);
+}
+
+function onRemoteNextRound({ state }) {
+  applyRemoteUI(state);
+  if (cur === mySide) startTurnTimer();
+}
+
+/* ── Activate online UI labels ───────────────────────────── */
+function activateOnlineUI() {
+  document.getElementById('m-online').className = 'mode-btn active-online';
+  document.getElementById('lbl-o').textContent = mySide==='O' ? t('lblYou') : t('lblOpponent');
+  document.getElementById('lbl-x').textContent = mySide==='X' ? t('lblYou') : t('lblOpponent');
+  if (onlineTimer > 0) document.getElementById('timer-bar').classList.add('visible');
+}
+
 /* ══ Boot ════════════════════════════════════════════════════ */
 scores = { O:0, X:0, tie:0 }; streaks = { O:0, X:0 }; round = 1; cur = HUMAN; feedLog = [];
 gameMode = '2p'; botThinking = false;
 // Apply saved preferences before first render
 if (theme === 'light') document.body.classList.add('light');
-init();
-refreshUI(); // apply lang to all static text after game is initialised
+// Auto-join if URL has a room hash
+const _initHash = window.location.hash.slice(1).toUpperCase();
+if (/^[A-Z0-9]{6}$/.test(_initHash)) {
+  init(); refreshUI();
+  openOnlineModal();
+} else {
+  init();
+  refreshUI(); // apply lang to all static text after game is initialised
+}
 </script>
 </body>
 </html>

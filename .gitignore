@@ -1,0 +1,5 @@
+# Local dev secrets — DO NOT COMMIT
+.env.local
+
+# Generated local dev file
+index.dev.html
