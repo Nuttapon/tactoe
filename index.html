@@ -1612,17 +1612,8 @@ function showOverlay(r) {
   btn.textContent = t('btnNext');
   btn.onclick = () => nextRound();
   btn.style.display = 'block';
-  // Rematch row: visible only in online mode if it's an infinite match
-  const rmRow = document.getElementById('ov-rematch-row');
-  const rmBtn = document.getElementById('ov-rematch-btn');
-  if (onlineMode && (!matchGoal || matchGoal === 0)) {
-    rmRow.classList.add('visible');
-    rmBtn.textContent = '\u26a1 Rematch';
-    rmBtn.className = 'ov-rematch-btn';
-    rmBtn.disabled = false;
-  } else {
-    rmRow.classList.remove('visible');
-  }
+  // Rematch row is only shown from checkMatchWin() when a finite match ends
+  document.getElementById('ov-rematch-row').classList.remove('visible');
   document.getElementById('board-overlay').classList.add('visible');
 }
 
