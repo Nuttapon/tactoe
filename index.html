@@ -277,10 +277,14 @@ body.light .board-overlay{ background:rgba(244,247,251,.82); }
 
 /* ══ Mode Selector ════════════════════════════════════════ */
 .mode-bar{
-  display:flex; gap:8px; align-items:center;
+  display:flex; align-items:center; gap:6px;
   background:var(--panel); border:1px solid var(--dim);
   border-radius:12px; padding:7px 10px;
+  overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch;
 }
+.mode-bar::-webkit-scrollbar{ display:none; }
+/* Centre items on wide screens; let them scroll on narrow */
+.mode-bar::before,.mode-bar::after{ content:''; flex:1; min-width:0; }
 .mode-lbl{ font-size:.55rem; letter-spacing:.2em; text-transform:uppercase; opacity:.3; margin-right:4px; }
 .mode-btn{
   font-family:var(--font); font-size:.72rem; font-weight:700; letter-spacing:.08em;
@@ -502,7 +506,20 @@ body.light .goal-btn.active{ border-color:var(--o); color:var(--o); }
   background:rgba(51,187,255,.08); cursor:pointer; transition:all .2s; flex:1; }
 .ov-rematch-btn:hover{ background:rgba(51,187,255,.18); }
 .ov-rematch-btn.waiting{ opacity:.6; cursor:not-allowed; }
-/* Game start animation overlay */
+/* Disconnect overlay */
+#dc-ov{ position:fixed; inset:0; z-index:8500; display:none; flex-direction:column; align-items:center;
+  justify-content:center; background:rgba(5,10,20,.88); text-align:center; gap:10px; }
+#dc-ov.show{ display:flex; }
+.dc-icon{ font-size:3rem; animation:fd .4s ease both; }
+.dc-title{ font-family:var(--font); font-size:1.2rem; font-weight:700; letter-spacing:.15em;
+  color:#fff; text-transform:uppercase; animation:fd .4s ease .1s both; }
+.dc-sub{ font-family:var(--font); font-size:.8rem; color:#5a7a90; animation:fd .4s ease .2s both; }
+.dc-cd{ font-family:var(--font); font-size:2.5rem; font-weight:900; color:var(--x); margin:8px 0;
+  animation:fd .4s ease .25s both; }
+.dc-btn{ font-family:var(--font); font-size:.8rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+  padding:10px 28px; border-radius:9px; border:1px solid var(--x); color:var(--x);
+  background:rgba(255,51,85,.1); cursor:pointer; display:none; margin-top:8px; transition:all .2s; }
+.dc-btn:hover{ background:rgba(255,51,85,.2); }
 #start-ov{ position:fixed; inset:0; z-index:8000; display:flex; flex-direction:column; align-items:center; justify-content:center;
   background:rgba(5,10,20,.92); opacity:0; pointer-events:none; transition:opacity .3s; }
 #start-ov.show{ opacity:1; pointer-events:all; }
@@ -696,6 +713,15 @@ body.light .goal-btn.active{ border-color:var(--o); color:var(--o); }
       <button class="rm-btn secondary" id="rm-cancel-btn" onclick="closeOnlineModal()" style="flex:1">Cancel</button>
     </div>
   </div>
+</div>
+
+<!-- Disconnect overlay -->
+<div id="dc-ov">
+  <div class="dc-icon">💔</div>
+  <div class="dc-title">Opponent Disconnected</div>
+  <div class="dc-sub">Waiting for them to rejoin…</div>
+  <div class="dc-cd" id="dc-cd">10</div>
+  <button class="dc-btn" id="dc-btn" onclick="dcGiveUp()">Return to Menu</button>
 </div>
 
 <!-- Game start animation overlay -->
@@ -1490,10 +1516,11 @@ function showOverlay(r) {
   res.textContent = msg; res.style.color = col;
   btn.textContent = t('btnNext');
   btn.onclick = () => nextRound();
-  // Rematch row: visible only in online mode
+  btn.style.display = 'block';
+  // Rematch row: visible only in online mode if it's an infinite match
   const rmRow = document.getElementById('ov-rematch-row');
   const rmBtn = document.getElementById('ov-rematch-btn');
-  if (onlineMode) {
+  if (onlineMode && (!matchGoal || matchGoal === 0)) {
     rmRow.classList.add('visible');
     rmBtn.textContent = '\u26a1 Rematch';
     rmBtn.className = 'ov-rematch-btn';
@@ -2704,7 +2731,9 @@ function setOnlineStatus(msg, cls = '') {
 /* ── Host room ─────────────────────────────────────────── */
 function hostRoom(id) {
   initSupa(); mySide = 'O';
-  onlineChannel = sbClient.channel(`tactoe:${id}`)
+  onlineChannel = sbClient.channel(`tactoe:${id}`, {
+    config: { presence: { key: mySide } }
+  })
     .on('broadcast', { event:'*' }, ({ event, payload }) => {
       if (payload.sender === mySide) return;
       switch(event) {
@@ -2738,14 +2767,24 @@ function hostRoom(id) {
           break;
       }
     })
-    .subscribe();
+    .on('presence', { event: 'leave' }, ({ leftPresences }) => {
+      if (leftPresences.some(p => p.side !== mySide)) handleDisconnect();
+    })
+    .on('presence', { event: 'join' }, ({ newPresences }) => {
+      if (newPresences.some(p => p.side !== mySide)) clearDisconnect();
+    })
+    .subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') await onlineChannel.track({ side: mySide });
+    });
 }
 
 /* ── Join room ─────────────────────────────────────────── */
 function joinRoom(id) {
   initSupa(); mySide = 'X';
   setOnlineStatus('🔗 Connecting…');
-  onlineChannel = sbClient.channel(`tactoe:${id}`)
+  onlineChannel = sbClient.channel(`tactoe:${id}`, {
+    config: { presence: { key: mySide } }
+  })
     .on('broadcast', { event:'*' }, ({ event, payload }) => {
       if (payload.sender === mySide) return;
       switch(event) {
@@ -2779,12 +2818,55 @@ function joinRoom(id) {
           break;
       }
     })
-    .subscribe(status => {
+    .on('presence', { event: 'leave' }, ({ leftPresences }) => {
+      if (leftPresences.some(p => p.side !== mySide)) handleDisconnect();
+    })
+    .on('presence', { event: 'join' }, ({ newPresences }) => {
+      if (newPresences.some(p => p.side !== mySide)) clearDisconnect();
+    })
+    .subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
+        await onlineChannel.track({ side: mySide });
         broadcastOnline('room:join');
         setOnlineStatus('⏳ Waiting for host…');
       }
     });
+}
+
+/* ── Disconnect Handling ───────────────────────────────────── */
+let dcInterval;
+
+function handleDisconnect() {
+  if (!onlineMode) return;
+  const ov = document.getElementById('dc-ov');
+  const cdEl = document.getElementById('dc-cd');
+  const btn = document.getElementById('dc-btn');
+  ov.classList.add('show');
+  
+  let cd = 10;
+  cdEl.textContent = cd;
+  btn.style.display = 'none';
+  
+  if (dcInterval) clearInterval(dcInterval);
+  dcInterval = setInterval(() => {
+    cd--;
+    cdEl.textContent = cd;
+    if (cd <= 0) {
+      clearInterval(dcInterval);
+      btn.style.display = 'block';
+      cdEl.textContent = 'Connection Lost';
+    }
+  }, 1000);
+}
+
+function clearDisconnect() {
+  document.getElementById('dc-ov').classList.remove('show');
+  if (dcInterval) clearInterval(dcInterval);
+}
+
+function dcGiveUp() {
+  clearDisconnect();
+  setMode('2p');
 }
 
 /* ── Remote event handlers ────────────────────────────────── */
@@ -3038,18 +3120,30 @@ function checkMatchWin(p) {
   const res = document.getElementById('ov-result');
   const btn = document.getElementById('ov-btn');
   res.innerHTML = `<span>${p} WINS<br>THE MATCH!</span><span style="font-size:1.8rem">${matchGoal} \u2605</span>`;
-  btn.textContent = 'Play Again';
-  btn.onclick = () => {
-    scores = {O:0,X:0,tie:0}; streaks = {O:0,X:0}; round = 1;
-    updScFull();
-    document.getElementById('sb-o').style.display = 'none';
-    document.getElementById('sb-x').style.display = 'none';
-    document.getElementById('match-banner').textContent = '';
-    btn.onclick = () => nextRound(); // restore
-    btn.textContent = t('nextRound');
-    clearWinLine();
-    init();
-  };
+  
+  if (onlineMode) {
+    btn.style.display = 'none';
+    const rmRow = document.getElementById('ov-rematch-row');
+    const rmBtn = document.getElementById('ov-rematch-btn');
+    rmRow.classList.add('visible');
+    rmBtn.textContent = '\u26a1 Rematch';
+    rmBtn.className = 'ov-rematch-btn';
+    rmBtn.disabled = false;
+  } else {
+    btn.style.display = 'block';
+    btn.textContent = 'Play Again';
+    btn.onclick = () => {
+      scores = {O:0,X:0,tie:0}; streaks = {O:0,X:0}; round = 1;
+      updScFull();
+      document.getElementById('sb-o').style.display = 'none';
+      document.getElementById('sb-x').style.display = 'none';
+      document.getElementById('match-banner').textContent = '';
+      btn.onclick = () => nextRound(); // restore
+      btn.textContent = t('nextRound');
+      clearWinLine();
+      init();
+    };
+  }
   ov.classList.add('visible');
   log(`\uD83C\uDFC6 ${p} wins the MATCH! First to ${matchGoal}.`);
   return true;
