@@ -1626,7 +1626,7 @@ function place(i, p) {
   render();
   const r = check();
   if (r) {
-    if (onlineMode) broadcastOnline('game:move', { soundPlayer: p, soundSpecial: s });
+    if (onlineMode) { over = true; broadcastOnline('game:move', { soundPlayer: p, soundSpecial: s }); }
     end(r); return;
   }
   endAction();
@@ -1944,6 +1944,7 @@ function abilTarget(p, i) {
       // Second selection — execute swap
       if (a.sf === i) { log(`🔄 Pick a different second cell!`); return; }
       const f = a.sf;
+      if (!board[f] && !board[i]) { log(`🔄 At least one cell must have a piece!`); return; }
       [board[f], board[i]] = [board[i], board[f]];
       a.active = false; a.used = true; a.ss = 0; a.sf = -1; clearTgt();
       log(`\uD83D\uDD04 ${p} swapped cells ${f+1} \u2194 ${i+1}!`);
@@ -2926,6 +2927,10 @@ function openOnlineModal() {
 }
 function closeOnlineModal() {
   document.getElementById('room-modal').classList.remove('open');
+  if (!onlineMode) {
+    if (onlineChannel) { onlineChannel.unsubscribe(); onlineChannel = null; }
+    if (window.location.hash) window.location.hash = '';
+  }
 }
 function _showRoleSection() {
   document.getElementById('rm-role-section').style.display  = 'block';
