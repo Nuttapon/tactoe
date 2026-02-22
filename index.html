@@ -818,6 +818,12 @@ body.light .goal-btn.active{ border-color:var(--o); color:var(--o); }
         <button class="rm-t" onclick="setOnlineGoal(7)">7</button>
         <button class="rm-t sel" onclick="setOnlineGoal(0)">∞</button>
       </div>
+      <div class="rm-sep" id="rm-sep-abilities">Abilities</div>
+      <div class="rm-timer-lbl" id="rm-abilities-lbl">Enable player abilities?</div>
+      <div class="rm-timer-opts" id="rm-abilities-opts">
+        <button class="rm-t sel" onclick="setOnlineAbilities(true)" id="rm-abl-on">On</button>
+        <button class="rm-t" onclick="setOnlineAbilities(false)" id="rm-abl-off">Off</button>
+      </div>
     </div>
 
     <!-- Guest section: pre-filled from URL hash -->
