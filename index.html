@@ -1528,12 +1528,19 @@ function init() {
   over = false; frozen = null; botThinking = false;
   document.getElementById('board-overlay').classList.remove('visible');
 
-  // Give each player a different random ability
-  const sh = shuffle([...POOL]);
-  ab = {
-    O: { type:sh[0], used:false, active:false, ss:0, sf:-1, ep:false },
-    X: { type:sh[1], used:false, active:false, ss:0, sf:-1, ep:false }
-  };
+  // Give each player a different random ability (unless disabled)
+  if (onlineAbilities !== false) {
+    const sh = shuffle([...POOL]);
+    ab = {
+      O: { type:sh[0], used:false, active:false, ss:0, sf:-1, ep:false },
+      X: { type:sh[1], used:false, active:false, ss:0, sf:-1, ep:false }
+    };
+  } else {
+    ab = {
+      O: { type:null, used:true, active:false, ss:0, sf:-1, ep:false },
+      X: { type:null, used:true, active:false, ss:0, sf:-1, ep:false }
+    };
+  }
 
   // Randomly place 1 Wall + 1-2 special tiles, never on center cell (4)
   const pool = shuffle([0,1,2,3,5,6,7,8]);
@@ -2072,6 +2079,8 @@ function renderAbs() {
 
     const card = document.getElementById(`ac-${lc}`);
     const btn  = document.getElementById(`ab-${lc}`);
+    if (a.type === null) { card.style.display = 'none'; continue; }
+    card.style.display = '';
     const glow = a.active ? (p==='O' ? 'go' : 'gx') : '';
     card.className = `ab-card${a.used ? ' used' : ''}${glow ? ' '+glow : ''}`;
 
@@ -2872,6 +2881,7 @@ let onlineMode    = false;  // active online session
 let mySide        = null;   // 'O' (host) or 'X' (guest)
 let onlineChannel = null;   // Supabase channel
 let onlineTimer   = 10;     // seconds (configured by host)
+let onlineAbilities = true; // whether abilities are enabled in online match
 let timerEnd      = 0;
 let timerRAF      = null;
 let sbClient      = null;
@@ -3047,7 +3057,7 @@ function hostRoom(id) {
           scores={O:0,X:0,tie:0}; streaks={O:0,X:0}; round=1; cur='O'; feedLog=[];
           document.getElementById('feed').innerHTML = '';
           init(); // host generates board
-          broadcastOnline('room:ready', { timerSecs: onlineTimer, matchGoal: matchGoal });
+          broadcastOnline('room:ready', { timerSecs: onlineTimer, matchGoal: matchGoal, abilitiesEnabled: onlineAbilities });
           setTimeout(() => { closeOnlineModal(); playStartAnimation(() => { activateOnlineUI(); startTurnTimer(); }); }, 700);
           break;
         case 'game:move':
@@ -3111,6 +3121,9 @@ function joinRoom(id) {
       switch(event) {
         case 'room:ready':
           onlineTimer = payload.timerSecs;
+          if (typeof payload.abilitiesEnabled === 'boolean') {
+            onlineAbilities = payload.abilitiesEnabled;
+          }
           if (typeof payload.matchGoal === 'number') {
             matchGoal = payload.matchGoal;
             // Sync goal bar UI
@@ -3271,6 +3284,11 @@ function setOnlineGoal(n) {
   const idx = [3,5,7,0].indexOf(n);
   const opts = document.querySelectorAll('#rm-goal-opts .rm-t');
   if (opts[idx]) opts[idx].classList.add('sel');
+}
+function setOnlineAbilities(enabled) {
+  onlineAbilities = enabled;
+  document.getElementById('rm-abl-on').classList.toggle('sel', enabled);
+  document.getElementById('rm-abl-off').classList.toggle('sel', !enabled);
 }
 
 function playStartAnimation(onDone) {
