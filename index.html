@@ -2122,8 +2122,9 @@ function showCellTooltip(i, el) {
   tip.textContent = txt;
   tip.style.display = 'block';
   const rect = el.getBoundingClientRect();
+  const tipTop = rect.top - 36;
   tip.style.left = `${rect.left + rect.width / 2}px`;
-  tip.style.top  = `${rect.top - 36}px`;
+  tip.style.top  = `${tipTop < 8 ? rect.bottom + 6 : tipTop}px`;
   tip.style.transform = 'translateX(-50%)';
   requestAnimationFrame(() => tip.classList.add('visible'));
 }
