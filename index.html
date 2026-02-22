@@ -1594,6 +1594,8 @@ function buildBoard() {
     const c = document.createElement('div');
     c.className = 'cell'; c.dataset.i = i;
     c.addEventListener('click', () => click(i));
+    c.addEventListener('mouseenter', () => showCellTooltip(i, c));
+    c.addEventListener('mouseleave', hideCellTooltip);
     el.appendChild(c);
   }
   render();
@@ -1912,7 +1914,7 @@ function useAbility(p) {
   // Toggle off if already armed
   if (a.active) {
     a.active = false; a.ss = 0; a.sf = -1;
-    clearTgt(); sndCancel(); log(`${p} cancelled ability.`); renderAbs(); return;
+    clearTgt(); hideCellTooltip(); sndCancel(); log(`${p} cancelled ability.`); renderAbs(); return;
   }
 
   const t = a.type;
@@ -2092,6 +2094,44 @@ function updateMiniCards() {
       turnTxt.textContent = isBot ? (isActive ? t('botThinking') : '') : t('yourTurn');
     }
   }
+}
+
+/* ── Ability cell hover tooltip ───────────────────────────── */
+function showCellTooltip(i, el) {
+  const p = ab.O.active ? 'O' : ab.X.active ? 'X' : null;
+  if (!p) return;
+  const a = ab[p];
+  let txt = '';
+
+  if (a.type === 'nuke') {
+    const cell = board[i];
+    if (!cell || cell.p === p) return;
+    txt = cell.sh ? `🛡️ Shielded — Nuke blocked` : `💥 Nuke this cell`;
+  } else if (a.type === 'shield') {
+    const cell = board[i];
+    if (!cell || cell.p !== p) return;
+    txt = `🛡️ Shield this cell`;
+  } else if (a.type === 'swap') {
+    if (specials[i] === 'wall') return;
+    txt = a.ss === 0 ? `🔄 Swap FROM here` : `🔄 Swap TO here`;
+  } else {
+    return;
+  }
+
+  const tip = document.getElementById('cell-tooltip');
+  tip.textContent = txt;
+  tip.style.display = 'block';
+  const rect = el.getBoundingClientRect();
+  tip.style.left = `${rect.left + rect.width / 2}px`;
+  tip.style.top  = `${rect.top - 36}px`;
+  tip.style.transform = 'translateX(-50%)';
+  requestAnimationFrame(() => tip.classList.add('visible'));
+}
+
+function hideCellTooltip() {
+  const tip = document.getElementById('cell-tooltip');
+  tip.classList.remove('visible');
+  setTimeout(() => { if (!tip.classList.contains('visible')) tip.style.display = 'none'; }, 120);
 }
 
 function renderAbs() {
