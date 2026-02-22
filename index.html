@@ -2182,6 +2182,7 @@ function setMode(m) {
   gameMode = m;
   // If leaving online mode, clean up online UI
   if (m !== 'online') {
+    localStorage.removeItem('ttt_session');
     onlineMode = false; mySide = null;
     if (onlineChannel) { onlineChannel.unsubscribe(); onlineChannel = null; }
     document.getElementById('emote-bar').classList.remove('visible');
@@ -3045,6 +3046,7 @@ function setOnlineStatus(msg, cls = '') {
 /* ── Host room ─────────────────────────────────────────── */
 function hostRoom(id) {
   initSupa(); mySide = 'O';
+  localStorage.setItem('ttt_session', JSON.stringify({ roomId: id, side: 'O' }));
   onlineChannel = sbClient.channel(`tactoe:${id}`, {
     config: { presence: { key: mySide } }
   })
@@ -3112,6 +3114,7 @@ function hostRoom(id) {
 /* ── Join room ─────────────────────────────────────────── */
 function joinRoom(id) {
   initSupa(); mySide = 'X';
+  localStorage.setItem('ttt_session', JSON.stringify({ roomId: id, side: 'X' }));
   setOnlineStatus(t('rmConnecting'));
   onlineChannel = sbClient.channel(`tactoe:${id}`, {
     config: { presence: { key: mySide } }
@@ -3216,6 +3219,7 @@ function clearDisconnect() {
 }
 
 function dcGiveUp() {
+  localStorage.removeItem('ttt_session');
   clearDisconnect();
   setMode('2p');
 }
