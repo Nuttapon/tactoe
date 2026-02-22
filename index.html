@@ -958,7 +958,16 @@ const LANG = {
     rmCreateRoom: 'Create Room',
     rmCreateRoomDesc: 'Share a code with your friend',
     rmJoinRoom: 'Join Room',
-    rmJoinRoomDesc: 'Enter a code to join'
+    rmJoinRoomDesc: 'Enter a code to join',
+    rmSepAbilities:'Abilities',
+    rmAbilitiesQuestion:'Enable player abilities?',
+    rmAbilitiesOn:'On',
+    rmAbilitiesOff:'Off',
+    dcRejoin:'Rejoin',
+    dcRejoining:'🔄 Reconnecting…',
+    dcRejoinFailed:'❌ Could not reconnect',
+    rejoinBannerMsg:'You have a game in progress.',
+    rejoinBannerBtn:'Rejoin'
   },
   th: {
     eyebrow:'ฉบับยุทธวิธี', tsub:'ไอเทม & ความสามารถ',
@@ -1023,7 +1032,16 @@ const LANG = {
     rmCreateRoom: 'สร้างห้อง',
     rmCreateRoomDesc: 'แชร์รหัสให้เพื่อน',
     rmJoinRoom: 'เข้าร่วมห้อง',
-    rmJoinRoomDesc: 'ใส่รหัสเพื่อเข้าร่วม'
+    rmJoinRoomDesc: 'ใส่รหัสเพื่อเข้าร่วม',
+    rmSepAbilities:'ความสามารถ',
+    rmAbilitiesQuestion:'เปิดใช้ความสามารถผู้เล่น?',
+    rmAbilitiesOn:'เปิด',
+    rmAbilitiesOff:'ปิด',
+    dcRejoin:'กลับเข้าเกม',
+    dcRejoining:'🔄 กำลังเชื่อมต่อใหม่…',
+    dcRejoinFailed:'❌ เชื่อมต่อใหม่ไม่สำเร็จ',
+    rejoinBannerMsg:'คุณมีเกมที่ยังเล่นค้างอยู่',
+    rejoinBannerBtn:'กลับเข้าเกม'
   }
 };
 
@@ -1074,6 +1092,7 @@ function refreshUI() {
     'rm-join-room-desc':   'rmJoinRoomDesc',
     // Disconnect overlay
     'dc-title':'dcTitle', 'dc-sub':'dcSub', 'dc-btn':'dcBtn',
+    'rm-sep-abilities':'rmSepAbilities', 'rm-abilities-lbl':'rmAbilitiesQuestion',
     // Start animation
     'start-match':'matchFound'
   };
