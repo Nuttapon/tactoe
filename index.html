@@ -537,6 +537,21 @@ body.light .pmc-frozen{ color:#0099dd; }
 body.light .rm-card{ background:#fff; border-color:rgba(0,200,160,.25); }
 body.light .rm-id{ background:rgba(0,0,0,.04); color:#223344; border-color:rgba(0,0,0,.12); }
 body.light .rm-join-input{ background:rgba(0,0,0,.04); color:#223344; border-color:rgba(0,0,0,.12); }
+.rm-role-btns {
+  display: flex; gap: 10px; margin: 12px 0 4px;
+}
+.rm-role-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  gap: 5px; padding: 18px 10px; border-radius: 12px;
+  border: 2px solid var(--border, #333); background: var(--bg-card, #1a1a1a);
+  cursor: pointer; transition: border-color 0.18s, background 0.18s;
+}
+.rm-role-btn:hover {
+  border-color: var(--accent, #4fc); background: rgba(68,255,204,0.07);
+}
+.rm-role-icon  { font-size: 1.8rem; }
+.rm-role-label { font-size: 0.95rem; font-weight: 700; color: var(--text, #eee); }
+.rm-role-desc  { font-size: 0.7rem; color: var(--text-sub, #888); text-align: center; }
 /* Win line SVG */
 #win-line-svg{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:5; overflow:visible; }
 #win-line-path{ fill:none; stroke-width:5; stroke-linecap:round; stroke-dasharray:600; stroke-dashoffset:600; }
@@ -767,6 +782,22 @@ body.light .goal-btn.active{ border-color:var(--o); color:var(--o); }
     <div class="rm-title" id="rm-title">🌐 Online Multiplayer</div>
     <div class="rm-sub" id="rm-sub">TACTICAL TACTOE</div>
 
+    <!-- Role selection screen (shown first when no hash) -->
+    <div id="rm-role-section" style="display:none">
+      <div class="rm-role-btns">
+        <button class="rm-role-btn" onclick="chooseHost()">
+          <span class="rm-role-icon">🏠</span>
+          <span class="rm-role-label" id="rm-create-room-lbl">Create Room</span>
+          <span class="rm-role-desc" id="rm-create-room-desc">Share a code with your friend</span>
+        </button>
+        <button class="rm-role-btn" onclick="chooseGuest()">
+          <span class="rm-role-icon">🔗</span>
+          <span class="rm-role-label" id="rm-join-room-lbl">Join Room</span>
+          <span class="rm-role-desc" id="rm-join-room-desc">Enter a code to join</span>
+        </button>
+      </div>
+    </div>
+
     <!-- Host section: auto-created, no action needed -->
     <div id="rm-host-section">
       <div class="rm-id" id="rm-room-id">------</div>
@@ -922,7 +953,12 @@ const LANG = {
     roleYou:       side => `YOU ARE ${side === 'O' ? '○' : '✕'}`,
     vsOpponent:    side => `vs ${side === 'O' ? 'X' : 'O'} — Opponent`,
     matchGoalLabel: n  => n ? `🏆 First to ${n} Wins` : '∞ Infinite Match',
-    startFight:'🞴 FIGHT!'
+    startFight:'🞴 FIGHT!',
+    rmEnterCode: 'Enter the room code to join',
+    rmCreateRoom: 'Create Room',
+    rmCreateRoomDesc: 'Share a code with your friend',
+    rmJoinRoom: 'Join Room',
+    rmJoinRoomDesc: 'Enter a code to join'
   },
   th: {
     eyebrow:'ฉบับยุทธวิธี', tsub:'ไอเทม & ความสามารถ',
@@ -982,7 +1018,12 @@ const LANG = {
     roleYou:       side => `คุณเล่น ${side === 'O' ? '○' : '✕'}`,
     vsOpponent:    side => `vs ${side === 'O' ? 'X' : 'O'} — คู่แข่ง`,
     matchGoalLabel: n  => n ? `🏆 แรกถึง ${n} ชนะ` : '∞ ไม่จำกัด',
-    startFight:'🞴 ต่อสู้!'
+    startFight:'🞴 ต่อสู้!',
+    rmEnterCode: 'ใส่รหัสห้องเพื่อเข้าร่วม',
+    rmCreateRoom: 'สร้างห้อง',
+    rmCreateRoomDesc: 'แชร์รหัสให้เพื่อน',
+    rmJoinRoom: 'เข้าร่วมห้อง',
+    rmJoinRoomDesc: 'ใส่รหัสเพื่อเข้าร่วม'
   }
 };
 
@@ -1027,6 +1068,10 @@ function refreshUI() {
     'rm-sep-goal':'rmSepGoal',   'rm-goal-lbl':'rmGoalQuestion',
     'rm-roomcode-lbl':'rmRoomCode',
     'rm-cancel-btn':'rmCancel',
+    'rm-create-room-lbl':  'rmCreateRoom',
+    'rm-create-room-desc': 'rmCreateRoomDesc',
+    'rm-join-room-lbl':    'rmJoinRoom',
+    'rm-join-room-desc':   'rmJoinRoomDesc',
     // Disconnect overlay
     'dc-title':'dcTitle', 'dc-sub':'dcSub', 'dc-btn':'dcBtn',
     // Start animation
@@ -1581,11 +1626,11 @@ function place(i, p) {
   render();
   const r = check();
   if (r) {
-    if (onlineMode) broadcastOnline('game:move');
+    if (onlineMode) broadcastOnline('game:move', { soundPlayer: p, soundSpecial: s });
     end(r); return;
   }
   endAction();
-  if (onlineMode) broadcastOnline('game:move');
+  if (onlineMode) broadcastOnline('game:move', { soundPlayer: p, soundSpecial: s });
 }
 
 /* ── Bomb: destroy a random unshielded neighbor ───────────── */
@@ -1825,7 +1870,7 @@ function useAbility(p) {
     log(`\uD83D\uDD2E ${p} ORACLE: Wall \u2192 \u2B50 Wildcard!`);
     sndOracle(); fxOracle(pk); floatTxt(pk, '\uD83D\uDD2E WALL\u2192STAR', '#cc88ff');
     render(); renderAbs();
-    if (onlineMode) broadcastOnline('game:ability');
+    if (onlineMode) broadcastOnline('game:ability', { type: 'oracle' });
     return;
   }
 
@@ -1835,7 +1880,7 @@ function useAbility(p) {
     a.used = true; a.ep = true;
     log(`\u26A1 ${p} armed EXTRA \u2014 two moves this turn!`);
     sndActivate(); renderAbs();
-    if (onlineMode) broadcastOnline('game:ability');
+    if (onlineMode) broadcastOnline('game:ability', { type: 'extra' });
     return;
   }
 
@@ -1868,8 +1913,9 @@ function abilTarget(p, i) {
     sndNuke(); fxNuke(i); floatTxt(i, '\uD83D\uDCA5 NUKED!', '#ff3355');
     render(); renderAbs();
     const r = check(); if (r) { if (onlineMode) broadcastOnline('game:ability', { type: t, p: p, target: i }); end(r); return; }
+    advTurn();
     if (onlineMode) broadcastOnline('game:ability', { type: t, p: p, target: i });
-    advTurn(); return;
+    return;
   }
 
   if (t === 'shield') {
@@ -1880,8 +1926,9 @@ function abilTarget(p, i) {
     log(`\uD83D\uDEE1\uFE0F ${p} shielded cell ${i+1}!`);
     sndShield(); fxShield(i); floatTxt(i, '\uD83D\uDEE1\uFE0F SHIELDED', '#33bbff');
     render(); renderAbs();
+    advTurn();
     if (onlineMode) broadcastOnline('game:ability', { type: t, p: p, target: i });
-    advTurn(); return;
+    return;
   }
 
   if (t === 'swap') {
@@ -1903,8 +1950,8 @@ function abilTarget(p, i) {
       sndSwap(); fxSwap(f, i);
       render(); renderAbs();
       const r = check(); if (r) { if (onlineMode) broadcastOnline('game:ability', { type: t, p: p, target1: f, target2: i }); end(r); return; }
-      if (onlineMode) broadcastOnline('game:ability', { type: t, p: p, target1: f, target2: i });
       advTurn();
+      if (onlineMode) broadcastOnline('game:ability', { type: t, p: p, target1: f, target2: i });
     }
   }
 }
@@ -2869,35 +2916,59 @@ function openOnlineModal() {
   const hash = window.location.hash.slice(1).toUpperCase();
   const isGuest = /^[A-Z0-9]{6}$/.test(hash);
 
-  document.getElementById('rm-host-section').style.display = isGuest ? 'none' : 'block';
-  document.getElementById('rm-guest-section').style.display = isGuest ? 'block' : 'none';
-
-  const actionBtn   = document.getElementById('rm-action-btn');
-  const cancelBtn   = document.getElementById('rm-cancel-btn');
+  document.getElementById('room-modal').classList.add('open');
 
   if (isGuest) {
-    // Guest — pre-fill input from hash URL, show Join button
-    document.getElementById('rm-join-input').value = hash;
-    setOnlineStatus(t('rmRoomFound'));
-    actionBtn.textContent = t('rmJoin');
-    actionBtn.style.display = 'block';
-    actionBtn.disabled = false;
-    cancelBtn.style.flex = '';
+    _showGuestSection(hash);   // direct link — same as before
   } else {
-    // Host — auto-generate room, subscribe immediately, no action button needed
-    const id = genRoomId();
-    window.location.hash = id;
-    document.getElementById('rm-room-id').textContent = id;
-    setOnlineStatus(t('rmWaitingOpponent'));
-    actionBtn.style.display = 'none';
-    cancelBtn.style.flex = '1';
-    hostRoom(id); // subscribe right away
+    _showRoleSection();         // show role selection
   }
-
-  document.getElementById('room-modal').classList.add('open');
 }
 function closeOnlineModal() {
   document.getElementById('room-modal').classList.remove('open');
+}
+function _showRoleSection() {
+  document.getElementById('rm-role-section').style.display  = 'block';
+  document.getElementById('rm-host-section').style.display  = 'none';
+  document.getElementById('rm-guest-section').style.display = 'none';
+  document.getElementById('rm-action-btn').style.display    = 'none';
+  document.getElementById('rm-cancel-btn').style.flex       = '1';
+  document.getElementById('rm-status').textContent = '';
+}
+function chooseHost() {
+  document.getElementById('rm-role-section').style.display  = 'none';
+  document.getElementById('rm-host-section').style.display  = 'block';
+  document.getElementById('rm-action-btn').style.display    = 'none';
+  document.getElementById('rm-cancel-btn').style.flex       = '1';
+  const id = genRoomId();
+  window.location.hash = id;
+  document.getElementById('rm-room-id').textContent = id;
+  setOnlineStatus(t('rmWaitingOpponent'));
+  hostRoom(id);
+}
+function chooseGuest() {
+  document.getElementById('rm-role-section').style.display  = 'none';
+  document.getElementById('rm-guest-section').style.display = 'block';
+  document.getElementById('rm-join-input').value = '';
+  setOnlineStatus(t('rmEnterCode'));
+  const btn = document.getElementById('rm-action-btn');
+  btn.textContent   = t('rmJoin');
+  btn.style.display = 'block';
+  btn.disabled      = false;
+  document.getElementById('rm-cancel-btn').style.flex = '';
+  setTimeout(() => document.getElementById('rm-join-input').focus(), 50);
+}
+function _showGuestSection(hash) {
+  document.getElementById('rm-role-section').style.display  = 'none';
+  document.getElementById('rm-host-section').style.display  = 'none';
+  document.getElementById('rm-guest-section').style.display = 'block';
+  document.getElementById('rm-join-input').value = hash;
+  setOnlineStatus(t('rmRoomFound'));
+  const btn = document.getElementById('rm-action-btn');
+  btn.textContent   = t('rmJoin');
+  btn.style.display = 'block';
+  btn.disabled      = false;
+  document.getElementById('rm-cancel-btn').style.flex = '';
 }
 function rmAction() {
   // Only called by guest Join Room button
@@ -2949,8 +3020,25 @@ function hostRoom(id) {
           broadcastOnline('room:ready', { timerSecs: onlineTimer, matchGoal: matchGoal });
           setTimeout(() => { closeOnlineModal(); playStartAnimation(() => { activateOnlineUI(); startTurnTimer(); }); }, 700);
           break;
-        case 'game:move': case 'game:ability':
-          applyRemoteUI(payload.state); break;
+        case 'game:move':
+          applyRemoteUI(payload.state);
+          if (payload.soundPlayer) {
+            sndPlace(payload.soundPlayer);
+            if (payload.soundSpecial === 'bomb')   sndBomb();
+            else if (payload.soundSpecial === 'freeze') sndFreeze();
+            else if (payload.soundSpecial === 'star')   sndStar();
+          }
+          break;
+        case 'game:ability':
+          applyRemoteUI(payload.state);
+          switch (payload.type) {
+            case 'nuke':   sndNuke();     break;
+            case 'shield': sndShield();   break;
+            case 'swap':   sndSwap();     break;
+            case 'oracle': sndOracle();   break;
+            case 'extra':  sndActivate(); break;
+          }
+          break;
         case 'game:end':   onRemoteEnd(payload); break;
         case 'game:next_round': onRemoteNextRound(payload); break;
         case 'game:reset':  applyRemoteUI(payload.state); break;
@@ -3007,8 +3095,25 @@ function joinRoom(id) {
           setOnlineStatus(t('rmConnected'), 'ok');
           setTimeout(() => { closeOnlineModal(); playStartAnimation(() => { activateOnlineUI(); updateOnlineTurnTimer(); }); }, 700);
           break;
-        case 'game:move': case 'game:ability':
-          applyRemoteUI(payload.state); break;
+        case 'game:move':
+          applyRemoteUI(payload.state);
+          if (payload.soundPlayer) {
+            sndPlace(payload.soundPlayer);
+            if (payload.soundSpecial === 'bomb')   sndBomb();
+            else if (payload.soundSpecial === 'freeze') sndFreeze();
+            else if (payload.soundSpecial === 'star')   sndStar();
+          }
+          break;
+        case 'game:ability':
+          applyRemoteUI(payload.state);
+          switch (payload.type) {
+            case 'nuke':   sndNuke();     break;
+            case 'shield': sndShield();   break;
+            case 'swap':   sndSwap();     break;
+            case 'oracle': sndOracle();   break;
+            case 'extra':  sndActivate(); break;
+          }
+          break;
         case 'game:end':   onRemoteEnd(payload); break;
         case 'game:next_round': onRemoteNextRound(payload); break;
         case 'game:reset':  applyRemoteUI(payload.state); break;
