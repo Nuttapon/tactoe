@@ -139,6 +139,22 @@ body.light .sc.x .streak-badge{ background:rgba(200,40,70,.08); }
 .status.x{ color:var(--x); text-shadow:0 0 14px rgba(255,51,85,.6); }
 .status.tie{ color:var(--tie); } .status.sys{ color:#55778a; }
 
+/* Online: your-turn pulse on status */
+@keyframes your-turn-o{
+  0%,100%{ text-shadow:0 0 14px rgba(0,255,204,.6); letter-spacing:.12em; }
+  50%    { text-shadow:0 0 28px rgba(0,255,204,1), 0 0 50px rgba(0,255,204,.5); letter-spacing:.16em; }
+}
+@keyframes your-turn-x{
+  0%,100%{ text-shadow:0 0 14px rgba(255,51,85,.6); letter-spacing:.12em; }
+  50%    { text-shadow:0 0 28px rgba(255,51,85,1),  0 0 50px rgba(255,51,85,.5);  letter-spacing:.16em; }
+}
+.status.your-turn-o{ animation:your-turn-o 1.2s ease infinite; }
+.status.your-turn-x{ animation:your-turn-x 1.2s ease infinite; }
+
+/* Online: scoreboard active highlight — stronger when it's your turn */
+.sc.your-turn.o{ box-shadow:0 0 36px rgba(0,255,204,.38); border-color:rgba(0,255,204,.55) !important; }
+.sc.your-turn.x{ box-shadow:0 0 36px rgba(255,51,85,.38);  border-color:rgba(255,51,85,.55)  !important; }
+
 /* Game area */
 .game-area{ display:flex; gap:18px; align-items:flex-start; width:100%; justify-content:center; }
 
@@ -951,7 +967,7 @@ const LANG = {
       shield:'Protect your cell from Nuke & Bomb. Costs your turn.',
       swap:  'Swap any 2 non-wall cells. Costs your turn.',
       extra: 'Instant! Place twice this turn.',
-      oracle:'Free: convert a random Wall into a ⭐ Wildcard.'
+      oracle:'Convert a random Wall into a ⭐ Wildcard. Costs your turn.'
     },
     streakLabel:'STREAK', streakLegendary:'LEGENDARY',
     lblOpponent:'OPPONENT',
@@ -1025,7 +1041,7 @@ const LANG = {
       shield:'ปกป้องช่องตัวเองจากนิวก์/ระเบิด เสียตา',
       swap:  'สลับ 2 ช่องที่ไม่ใช่กำแพง เสียตา',
       extra: 'ทันที! วางได้ 2 ครั้งในตานี้',
-      oracle:'ฟรี: แปลงกำแพงเป็น ⭐ ไพ่ตาย'
+      oracle:'แปลงกำแพงเป็น ⭐ ไพ่ตาย (ใช้ตา)'
     },
     streakLabel:'สตรีค', streakLegendary:'ตำนาน',
     lblOpponent:'คู่แข่ง',
@@ -1542,9 +1558,11 @@ const ABIL = {
   shield:{ icon:'🛡️', name:'SHIELD',     desc:'Protect your cell from Nuke & Bomb. Costs your turn.' },
   swap:  { icon:'🔄', name:'SWAP',       desc:'Swap any 2 non-wall cells. Costs your turn.' },
   extra: { icon:'⚡', name:'EXTRA TURN', desc:'Instant! Place twice this turn.' },
-  oracle:{ icon:'🔮', name:'ORACLE',     desc:'Free: convert a random Wall into a ⭐ Wildcard.' }
+  oracle:{ icon:'🔮', name:'ORACLE',     desc:'Convert a random Wall into a ⭐ Wildcard. Costs your turn.' }
 };
 const POOL = Object.keys(ABIL);
+// Weighted pool: nuke/shield/swap appear 2x more often than oracle/extra
+const POOL_WEIGHTED = ['nuke','nuke','shield','shield','swap','swap','extra','oracle'];
 
 let board, specials, cur, frozen, over, round, scores, streaks, ab, feedLog;
 
@@ -1557,10 +1575,13 @@ function init() {
 
   // Give each player a different random ability (unless disabled)
   if (onlineAbilities !== false) {
-    const sh = shuffle([...POOL]);
+    // Pick 2 different abilities from weighted pool
+    const sh = shuffle([...POOL_WEIGHTED]);
+    const typeO = sh[0];
+    const typeX = sh.find(t => t !== typeO) || sh[1];
     ab = {
-      O: { type:sh[0], used:false, active:false, ss:0, sf:-1, ep:false },
-      X: { type:sh[1], used:false, active:false, ss:0, sf:-1, ep:false }
+      O: { type:typeO, used:false, active:false, ss:0, sf:-1, ep:false },
+      X: { type:typeX, used:false, active:false, ss:0, sf:-1, ep:false }
     };
   } else {
     ab = {
@@ -1921,17 +1942,19 @@ function useAbility(p) {
 
   const t = a.type;
 
-  /* ORACLE — free bonus, no turn cost */
+  /* ORACLE — costs the turn (converted from "free" to balanced) */
   if (t === 'oracle') {
+    if (cur !== p) { log(`🔮 Oracle can only be used on YOUR turn!`); return; }
     const ws = specials.map((s,i) => s==='wall' ? i : -1).filter(i => i >= 0);
-    if (!ws.length) { log(`\uD83D\uDD2E No walls left to convert!`); return; }
+    if (!ws.length) { log(`🔮 No walls left to convert!`); return; }
     a.used = true;
     const pk = ws[0 | Math.random() * ws.length];
     specials[pk] = 'star';
-    log(`\uD83D\uDD2E ${p} ORACLE: Wall \u2192 \u2B50 Wildcard!`);
-    sndOracle(); fxOracle(pk); floatTxt(pk, '\uD83D\uDD2E WALL\u2192STAR', '#cc88ff');
+    log(`🔮 ${p} ORACLE: Wall → ⭐ Wildcard! (turn used)`);
+    sndOracle(); fxOracle(pk); floatTxt(pk, '🔮 WALL→STAR', '#cc88ff');
     render(); renderAbs();
     if (onlineMode) broadcastOnline('game:ability', { type: 'oracle' });
+    advTurn();
     return;
   }
 
@@ -2040,12 +2063,25 @@ function clearTgt() {
 /* ══ UI Helpers ══════════════════════════════════════════════ */
 function setSt(msg, cls) {
   const e = document.getElementById('status');
-  e.textContent = msg; e.className = `status ${cls}`;
+  e.textContent = msg;
+  // In online mode, pulse the status when it's YOUR turn
+  let extra = '';
+  if (onlineMode && !over && mySide && cls === mySide.toLowerCase()) {
+    extra = ` your-turn-${mySide.toLowerCase()}`;
+  }
+  e.className = `status ${cls}${extra}`;
 }
 
 function updSc() {
-  document.getElementById('sc-o').className = `sc o${!over && cur==='O' ? ' active' : ''}`;
-  document.getElementById('sc-x').className = `sc x${!over && cur==='X' ? ' active' : ''}`;
+  const scO = document.getElementById('sc-o');
+  const scX = document.getElementById('sc-x');
+  const isOActive = !over && cur === 'O';
+  const isXActive = !over && cur === 'X';
+  // In online mode, add extra 'your-turn' highlight to the active player's scoreboard
+  const oYT = onlineMode && isOActive && mySide === 'O' ? ' your-turn' : '';
+  const xYT = onlineMode && isXActive && mySide === 'X' ? ' your-turn' : '';
+  scO.className = `sc o${isOActive ? ' active' : ''}${oYT}`;
+  scX.className = `sc x${isXActive ? ' active' : ''}${xYT}`;
   updateMiniCards();
 }
 
@@ -2958,6 +2994,7 @@ let timerEnd      = 0;
 let timerRAF      = null;
 let sbClient      = null;
 let pendingNR     = false;  // guest waiting for host to init next round
+let _isRejoining  = false;  // flag: rejoining existing game (skip room:join/reset logic)
 
 function initSupa() {
   if (!sbClient) sbClient = window.supabase.createClient(SUPA_URL, SUPA_KEY);
@@ -3125,6 +3162,7 @@ function hostRoom(id) {
       if (payload.sender === mySide) return;
       switch(event) {
         case 'room:join':
+          if (_isRejoining) { _isRejoining = false; break; } // ignore spurious room:join on rejoin
           setOnlineStatus(t('rmOppJoined'), 'ok');
           onlineMode = true; gameMode = 'online';
           scores={O:0,X:0,tie:0}; streaks={O:0,X:0}; round=1; cur='O'; feedLog=[];
@@ -3262,8 +3300,12 @@ function joinRoom(id) {
     .subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         await onlineChannel.track({ side: mySide });
-        broadcastOnline('room:join');
-        setOnlineStatus(t('rmWaitingHost'));
+        if (!_isRejoining) {
+          // Only announce room:join on first connect, not on rejoin
+          broadcastOnline('room:join');
+          setOnlineStatus(t('rmWaitingHost'));
+        }
+        _isRejoining = false; // reset flag
       }
     });
 }
@@ -3328,44 +3370,59 @@ function dcRejoin() {
   // Unsubscribe old channel if any
   if (onlineChannel) { onlineChannel.unsubscribe(); onlineChannel = null; }
 
-  // Resubscribe to the same channel
-  initSupa();
-  onlineChannel = sbClient.channel(`tactoe:${roomId}`, {
-    config: { presence: { key: mySide } }
-  })
-    .on('broadcast', { event:'*' }, ({ event, payload }) => {
-      if (payload.sender === mySide) return;
-      if (event === 'room:sync') {
-        onlineMode = true; gameMode = 'online';
-        applyNetState(payload.state);
-        if (window._rejoinTimeout) { clearTimeout(window._rejoinTimeout); window._rejoinTimeout = null; }
-        render(); renderAbs();
-        document.getElementById('rejoin-banner').style.display = 'none';
-        clearDisconnect();
-        activateOnlineUI();
-        updateOnlineTurnTimer();
-      }
-    })
-    .on('presence', { event: 'leave' }, ({ leftPresences }) => {
-      if (leftPresences.some(p => p.side !== mySide)) handleDisconnect();
-    })
-    .on('presence', { event: 'join' }, ({ newPresences }) => {
-      if (newPresences.some(p => p.side !== mySide)) clearDisconnect();
-    })
-    .subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') {
-        await onlineChannel.track({ side: mySide });
-        broadcastOnline('room:rejoin');
-      }
-    });
-
-  // Timeout: if no room:sync in 5s, show failure
+  // Timeout: if no room:sync in 6s, show failure
+  if (window._rejoinTimeout) clearTimeout(window._rejoinTimeout);
   window._rejoinTimeout = setTimeout(() => {
     if (document.getElementById('dc-ov').classList.contains('show')) {
       cdEl.textContent = t('dcRejoinFailed');
       giveUpBtn.style.display = 'block';
     }
-  }, 5000);
+  }, 6000);
+
+  // Subscribe with a minimal handler — only looking for room:sync response
+  initSupa();
+  const tempCh = sbClient.channel(`tactoe:${roomId}`, {
+    config: { presence: { key: side } }
+  })
+    .on('broadcast', { event: 'room:sync' }, ({ payload }) => {
+      // Got state back — rejoin success!
+      if (window._rejoinTimeout) { clearTimeout(window._rejoinTimeout); window._rejoinTimeout = null; }
+
+      // Tear down this temporary channel
+      tempCh.unsubscribe();
+      onlineChannel = null;
+
+      // Apply the synced state before re-establishing full channel
+      onlineMode = true; gameMode = 'online';
+      applyNetState(payload.state);
+
+      // Re-init the full channel with proper role-specific handlers
+      _isRejoining = true;
+      if (side === 'O') {
+        hostRoom(roomId);
+      } else {
+        joinRoom(roomId);
+      }
+
+      // After channel is set up, update UI
+      setTimeout(() => {
+        document.getElementById('rejoin-banner').style.display = 'none';
+        clearDisconnect();
+        closeOnlineModal();
+        applyRemoteUI(payload.state);
+        activateOnlineUI();
+        updateOnlineTurnTimer();
+      }, 300);
+    })
+    .subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await tempCh.track({ side });
+        // Announce rejoin to make the other side send room:sync
+        tempCh.send({ type: 'broadcast', event: 'room:rejoin', payload: { sender: side, state: getNetState() } });
+      }
+    });
+
+  onlineChannel = tempCh;
 }
 
 /* ── Remote event handlers ────────────────────────────────── */
