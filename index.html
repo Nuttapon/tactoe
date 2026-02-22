@@ -604,6 +604,8 @@ body.light .goal-btn.active{ border-color:var(--o); color:var(--o); }
   padding:10px 28px; border-radius:9px; border:1px solid var(--x); color:var(--x);
   background:rgba(255,51,85,.1); cursor:pointer; display:none; margin-top:8px; transition:all .2s; }
 .dc-btn:hover{ background:rgba(255,51,85,.2); }
+.dc-btn-rejoin{ border-color:var(--o); color:var(--o); background:rgba(0,200,255,.1); }
+.dc-btn-rejoin:hover{ background:rgba(0,200,255,.2); }
 #start-ov{ position:fixed; inset:0; z-index:8000; display:flex; flex-direction:column; align-items:center; justify-content:center;
   background:rgba(5,10,20,.92); opacity:0; pointer-events:none; transition:opacity .3s; }
 #start-ov.show{ opacity:1; pointer-events:all; }
@@ -850,6 +852,7 @@ body.light .goal-btn.active{ border-color:var(--o); color:var(--o); }
   <div class="dc-sub" id="dc-sub">Waiting for them to rejoin…</div>
   <div class="dc-cd" id="dc-cd">10</div>
   <button class="dc-btn" id="dc-btn" onclick="dcGiveUp()">Return to Menu</button>
+  <button class="dc-btn dc-btn-rejoin" id="dc-rejoin-btn" onclick="dcRejoin()" style="display:none">Rejoin</button>
 </div>
 
 <!-- Game start animation overlay -->
@@ -3090,6 +3093,11 @@ function hostRoom(id) {
           broadcastOnline('game:next_round');
           break;
         case 'game:emote': showEmoteBubble(payload.emoji, payload.sender); break;
+        case 'room:rejoin':
+          clearDisconnect();
+          broadcastOnline('room:sync');
+          break;
+        case 'room:sync': break; // host ignores sync (it sent it)
         case 'game:rematch':
           if (mySide === 'O') { // host generates new round
             round++; init();
@@ -3165,6 +3173,11 @@ function joinRoom(id) {
         case 'game:reset':  applyRemoteUI(payload.state); break;
         case 'game:timer':  if(cur!==mySide){ clearTurnTimer(); advTurn(); } break;
         case 'game:emote': showEmoteBubble(payload.emoji, payload.sender); break;
+        case 'room:rejoin':
+          clearDisconnect();
+          broadcastOnline('room:sync');
+          break;
+        case 'room:sync': break; // guest ignores sync (it sent it)
         case 'game:rematch':
           // Host sent rematch (game:next_round will follow), just close overlay
           document.getElementById('board-overlay').classList.remove('visible');
@@ -3208,6 +3221,8 @@ function handleDisconnect() {
     if (cd <= 0) {
       clearInterval(dcInterval);
       btn.style.display = 'block';
+      const rejoinBtn = document.getElementById('dc-rejoin-btn');
+      if (localStorage.getItem('ttt_session')) rejoinBtn.style.display = 'block';
       cdEl.textContent = t('connLost');
     }
   }, 1000);
@@ -3222,6 +3237,57 @@ function dcGiveUp() {
   localStorage.removeItem('ttt_session');
   clearDisconnect();
   setMode('2p');
+}
+function dcRejoin() {
+  const raw = localStorage.getItem('ttt_session');
+  if (!raw) { dcGiveUp(); return; }
+  const { roomId, side } = JSON.parse(raw);
+  mySide = side;
+  const cdEl = document.getElementById('dc-cd');
+  const rejoinBtn = document.getElementById('dc-rejoin-btn');
+  const giveUpBtn = document.getElementById('dc-btn');
+  cdEl.textContent = t('dcRejoining');
+  rejoinBtn.style.display = 'none';
+  giveUpBtn.style.display = 'none';
+
+  // Unsubscribe old channel if any
+  if (onlineChannel) { onlineChannel.unsubscribe(); onlineChannel = null; }
+
+  // Resubscribe to the same channel
+  initSupa();
+  onlineChannel = sbClient.channel(`tactoe:${roomId}`, {
+    config: { presence: { key: mySide } }
+  })
+    .on('broadcast', { event:'*' }, ({ event, payload }) => {
+      if (payload.sender === mySide) return;
+      if (event === 'room:sync') {
+        applyNetState(payload.state);
+        if (window._rejoinTimeout) { clearTimeout(window._rejoinTimeout); window._rejoinTimeout = null; }
+        render(); renderAbs();
+        clearDisconnect();
+        updateOnlineTurnTimer();
+      }
+    })
+    .on('presence', { event: 'leave' }, ({ leftPresences }) => {
+      if (leftPresences.some(p => p.side !== mySide)) handleDisconnect();
+    })
+    .on('presence', { event: 'join' }, ({ newPresences }) => {
+      if (newPresences.some(p => p.side !== mySide)) clearDisconnect();
+    })
+    .subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await onlineChannel.track({ side: mySide });
+        broadcastOnline('room:rejoin');
+      }
+    });
+
+  // Timeout: if no room:sync in 5s, show failure
+  window._rejoinTimeout = setTimeout(() => {
+    if (document.getElementById('dc-ov').classList.contains('show')) {
+      cdEl.textContent = t('dcRejoinFailed');
+      giveUpBtn.style.display = 'block';
+    }
+  }, 5000);
 }
 
 /* ── Remote event handlers ────────────────────────────────── */
