@@ -606,6 +606,12 @@ body.light .goal-btn.active{ border-color:var(--o); color:var(--o); }
 .dc-btn:hover{ background:rgba(255,51,85,.2); }
 .dc-btn-rejoin{ border-color:var(--o); color:var(--o); background:rgba(0,200,255,.1); }
 .dc-btn-rejoin:hover{ background:rgba(0,200,255,.2); }
+#cell-tooltip{ position:fixed; z-index:7000; pointer-events:none;
+  background:rgba(5,10,20,.92); border:1px solid rgba(255,255,255,.15);
+  border-radius:8px; padding:5px 10px; font-family:var(--font);
+  font-size:.72rem; font-weight:600; letter-spacing:.05em; color:#fff;
+  white-space:nowrap; opacity:0; transition:opacity .12s; }
+#cell-tooltip.visible{ opacity:1; }
 #rejoin-banner{ position:fixed; top:0; left:0; right:0; z-index:9000;
   background:rgba(0,200,255,.15); border-bottom:1px solid var(--o);
   display:flex; align-items:center; justify-content:center; gap:12px;
@@ -853,6 +859,8 @@ body.light .goal-btn.active{ border-color:var(--o); color:var(--o); }
   </div>
 </div>
 
+<!-- Ability cell hover tooltip -->
+<div id="cell-tooltip" style="display:none"></div>
 <!-- Disconnect overlay -->
 <div id="dc-ov">
   <div class="dc-icon">💔</div>
