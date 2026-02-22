@@ -606,6 +606,14 @@ body.light .goal-btn.active{ border-color:var(--o); color:var(--o); }
 .dc-btn:hover{ background:rgba(255,51,85,.2); }
 .dc-btn-rejoin{ border-color:var(--o); color:var(--o); background:rgba(0,200,255,.1); }
 .dc-btn-rejoin:hover{ background:rgba(0,200,255,.2); }
+#rejoin-banner{ position:fixed; top:0; left:0; right:0; z-index:9000;
+  background:rgba(0,200,255,.15); border-bottom:1px solid var(--o);
+  display:flex; align-items:center; justify-content:center; gap:12px;
+  padding:10px 16px; font-family:var(--font); font-size:.8rem; color:#fff; }
+#rejoin-banner button{ font-family:var(--font); font-size:.75rem; font-weight:700;
+  padding:5px 14px; border-radius:7px; border:1px solid var(--o); cursor:pointer;
+  background:rgba(0,200,255,.2); color:var(--o); letter-spacing:.05em; }
+#rejoin-banner button:last-child{ border-color:#555; color:#888; background:transparent; }
 #start-ov{ position:fixed; inset:0; z-index:8000; display:flex; flex-direction:column; align-items:center; justify-content:center;
   background:rgba(5,10,20,.92); opacity:0; pointer-events:none; transition:opacity .3s; }
 #start-ov.show{ opacity:1; pointer-events:all; }
@@ -855,6 +863,12 @@ body.light .goal-btn.active{ border-color:var(--o); color:var(--o); }
   <button class="dc-btn dc-btn-rejoin" id="dc-rejoin-btn" onclick="dcRejoin()" style="display:none">Rejoin</button>
 </div>
 
+<!-- Rejoin banner (shown on page load if localStorage has active session) -->
+<div id="rejoin-banner" style="display:none">
+  <span id="rejoin-banner-msg"></span>
+  <button onclick="dcRejoin()">Rejoin</button>
+  <button onclick="dismissRejoinBanner()">✕</button>
+</div>
 <!-- Game start animation overlay -->
 <div id="start-ov">
   <div class="start-match" id="start-match">Match Found</div>
@@ -3238,6 +3252,10 @@ function dcGiveUp() {
   clearDisconnect();
   setMode('2p');
 }
+function dismissRejoinBanner() {
+  localStorage.removeItem('ttt_session');
+  document.getElementById('rejoin-banner').style.display = 'none';
+}
 function dcRejoin() {
   const raw = localStorage.getItem('ttt_session');
   if (!raw) { dcGiveUp(); return; }
@@ -3593,6 +3611,15 @@ if (/^[A-Z0-9]{6}$/.test(_initHash)) {
   init();
   refreshUI(); // apply lang to all static text after game is initialised
 }
+/* ── Page-load: check for abandoned session ─────────────── */
+(function checkRejoinSession() {
+  const raw = localStorage.getItem('ttt_session');
+  if (!raw) return;
+  const banner = document.getElementById('rejoin-banner');
+  document.getElementById('rejoin-banner-msg').textContent = t('rejoinBannerMsg');
+  banner.querySelector('button').textContent = t('rejoinBannerBtn');
+  banner.style.display = 'flex';
+})();
 </script>
 </body>
 </html>
