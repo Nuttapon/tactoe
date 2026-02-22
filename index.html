@@ -1124,6 +1124,8 @@ function refreshUI() {
     // Disconnect overlay
     'dc-title':'dcTitle', 'dc-sub':'dcSub', 'dc-btn':'dcBtn',
     'rm-sep-abilities':'rmSepAbilities', 'rm-abilities-lbl':'rmAbilitiesQuestion',
+    'rm-abl-on':'rmAbilitiesOn', 'rm-abl-off':'rmAbilitiesOff',
+    'rejoin-banner-msg':'rejoinBannerMsg',
     // Start animation
     'start-match':'matchFound'
   };
@@ -2113,6 +2115,8 @@ function showCellTooltip(i, el) {
     txt = `🛡️ Shield this cell`;
   } else if (a.type === 'swap') {
     if (specials[i] === 'wall') return;
+    if (a.ss === 1 && a.sf === i) return;
+    if (a.ss === 1 && !board[a.sf] && !board[i]) return;
     txt = a.ss === 0 ? `🔄 Swap FROM here` : `🔄 Swap TO here`;
   } else {
     return;
@@ -2249,6 +2253,7 @@ function setMode(m) {
   // If leaving online mode, clean up online UI
   if (m !== 'online') {
     localStorage.removeItem('ttt_session');
+    onlineAbilities = true;
     onlineMode = false; mySide = null;
     if (onlineChannel) { onlineChannel.unsubscribe(); onlineChannel = null; }
     document.getElementById('emote-bar').classList.remove('visible');
@@ -3276,6 +3281,7 @@ function handleDisconnect() {
   let cd = 10;
   cdEl.textContent = cd;
   btn.style.display = 'none';
+  document.getElementById('dc-rejoin-btn').style.display = 'none';
   
   if (dcInterval) clearInterval(dcInterval);
   dcInterval = setInterval(() => {
@@ -3310,6 +3316,8 @@ function dcRejoin() {
   if (!raw) { dcGiveUp(); return; }
   const { roomId, side } = JSON.parse(raw);
   mySide = side;
+  document.getElementById('dc-ov').classList.add('show');
+  document.getElementById('rejoin-banner').style.display = 'none';
   const cdEl = document.getElementById('dc-cd');
   const rejoinBtn = document.getElementById('dc-rejoin-btn');
   const giveUpBtn = document.getElementById('dc-btn');
@@ -3328,10 +3336,13 @@ function dcRejoin() {
     .on('broadcast', { event:'*' }, ({ event, payload }) => {
       if (payload.sender === mySide) return;
       if (event === 'room:sync') {
+        onlineMode = true; gameMode = 'online';
         applyNetState(payload.state);
         if (window._rejoinTimeout) { clearTimeout(window._rejoinTimeout); window._rejoinTimeout = null; }
         render(); renderAbs();
+        document.getElementById('rejoin-banner').style.display = 'none';
         clearDisconnect();
+        activateOnlineUI();
         updateOnlineTurnTimer();
       }
     })
